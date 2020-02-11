@@ -152,6 +152,24 @@ This function is a porting layer API which be implemented by chip vendor to hand
 
 ```cpp
 /**
+ * @brief Create switch
+ *
+ * SDK initialization/connect to SDK. After the call the capability attributes should be
+ * ready for retrieval via sai_get_switch_attribute(). Same Switch Object id should be
+ * given for create/connect for each NPU.
+ *
+ * @param[out] switch_id The Switch Object ID
+ * @param[in] attr_count Number of attributes
+ * @param[in] attr_list Array of attributes
+ *
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ */
+typedef sai_status_t (*sai_create_switch_fn)(
+        _Out_ sai_object_id_t *switch_id,
+        _In_ uint32_t attr_count,
+        _In_ const sai_attribute_t *attr_list);
+        
+/**
  * @brief Switch line card event notification.
  *
  * For notify when line card status change
@@ -197,6 +215,23 @@ typedef struct _sai_switch_line_card_info_t
 ```
 
 The **get_switch_attribute** SAI API is used to get the attributes on switch which were listed in Table 1.  
+
+```cpp
+/**
+ * @brief Get switch attribute value
+ *
+ * @param[in] switch_id Switch id
+ * @param[in] attr_count Number of attributes
+ * @param[inout] attr_list Array of switch attributes
+ *
+ * @return #SAI_STATUS_SUCCESS on success, failure status code on error
+ */
+typedef sai_status_t (*sai_get_switch_attribute_fn)(
+        _In_ sai_object_id_t switch_id,
+        _In_ uint32_t attr_count,
+        _Inout_ sai_attribute_t *attr_list); 
+```
+
 + SAI_SWITCH_ATTR_LINE_CARD_STATUS  
 + SAI_SWITCH_ATTR_LINE_CARD_SPEED  
 + SAI_SWITCH_ATTR_LINE_CARD_SLOTS  
