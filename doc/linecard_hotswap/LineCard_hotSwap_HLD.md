@@ -75,12 +75,12 @@ This HLD provides a generic software mechanism of line card hot swapping, which 
 1.	1 chassis consists of swappable line cards.
 2.	Every line card with the same card type, 32*100G(Different card type will be implemented in the near future.)
 3.	Each line card can be
-    *	Hot plug in
-    *	Hot unplug out
-4.	Hot plug in
+    *   plug in
+    *	unplug out
+4.	Plug in
     *	Event log with card number, card type
     *	Automatically apply the configuration for that line card
-5.	Hot unplug out
+5.	Unplug out
     *	Event log with card number, card type
     *	All ports on the line card are link down.
     *	User still can configure the line card, but the configuration will not take effect until the line card is plugged in again.
@@ -276,10 +276,7 @@ When a line card is inserted or removed, syncd will get the event and will updat
 
 ###### Figure 3: State table update
 
-When SDK needs to configure a port via SAI, it will check the port status in Port State Table.  If the port is not present, SDK will not configure the port and will still return SUCCESS to forge the successful configuration.
-
-The “port config filter” will filter out configure action of not-present ports. Syncd will maintain a “Port State Table” to record port present or not-present. When Syncd initialize, it will get current line card state and store in “Port State Table”.
-When line card be plug-in or unplug-out, SAI will be notified and update the status to “Port State Table”.
+When user needs to configure a port via SAI, it will check the port status in Port State Table.  If the port is not present, SAI will not configure the port and return SUCCESS to forge the successful configuration.
 
 #### 4.1.3 Port initialize<a name="port-initialize"></a>
 
@@ -325,9 +322,9 @@ The application who subscribes the database will be notified. After all the subs
 
 To support hot plug-in and unplug-out, the system needs to subscribe line card event and re-apply configuration when line card status changes.
 
-In SONiC system, the “PortsOrch” will subscribe port change event, and doing action when port change.So portsOrch also involves the tasks of line card hot swaping.
+In SONiC system, the “PortsOrch” will subscribe port change event, and doing action when port change.So portsOrch also involves the tasks of line card hot swapping.
 Since the system is only for 100G line card currently and the config_db.json will contain all ports configuration, the “PortsOrch” only need do “config load” action when receiving line card change event. This will trigger system to reconfigure all ports again.
-After testing, the “config load” action will not affect ongoing traffic. So the Plug-in/Unplug-out action will not affect ongoing traffic.
+The “config load” action will not affect ongoing traffic. So the Plug-in/Unplug-out action will not affect ongoing traffic.
 
 Following chart shows the reconfiguration flow in SONiC.
 
@@ -338,7 +335,7 @@ Following chart shows the reconfiguration flow in SONiC.
 1.	While Plug-in/Unplug-out line card, syncd will update the “Port State Table” for “Port Config Filter”.  
 2.	After receiving line card event, it will execute callback function and PUBLISH the event to Redis DB.
 3.	The “PortsOrch” will be notified when line card change.
-4.	“PortsOrch” will doing “config load”.
+4.	“PortsOrch” will do “config load”.
 
 The config flow will follow Figure5 to reapply the configuration to SAI.
 
@@ -358,7 +355,7 @@ There is no new configuration needed for line card hot swapping, so the mechanis
 
 ## 7 Scalability<a name="scalability"></a>
 
-Hot swapping line cards with different card types, ex, 100G and 400G or different port number on line card. 
+Hot swapping line cards with different card types, ex, 100G X 32 and 400G X 8 on line card. 
 
 ## 8 Tests<a name="tests"></a>
 
