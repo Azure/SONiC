@@ -44,12 +44,13 @@ This document describes the software high-level design of line card hot swapping
 
 ## Abbreviation<a name="abbreviation"></a>
 
-|Term	|Meaning                     |
-|:-----:|:--------------------------:|
-|PHY	|Physical layer              |
-|DB     |Date base                   |
-|CLI    |Command-Line Interface      |
-|IPC	|Inter Process communication |
+|Term	   |Meaning                                                       |
+|:--------:|:------------------------------------------------------------:|
+|PHY	   |Physical layer                                                |
+|DB        |Date base                                                     |
+|CLI       |Command-Line Interface                                        |
+|IPC	   |Inter Process communication                                   |
+|line card |A swappable cage which may consists of multiple external PHYs |
 
 ## List of figures<a name="list-of-figures"></a>
 [Figure 1: Line Card Hot Swap High Level Architecture](./f1.jpg)  
@@ -72,19 +73,19 @@ This HLD provides a generic software mechanism of line card hot swapping, which 
 ### 2.1 Functional Requirements<a name="functionality"></a>
 
 **This feature will support the following functionality:**
-1.	1 chassis consists of swappable line cards.
-2.	Every line card with the same card type, 32*100G(Different card type will be implemented in the near future.)
+1.	A chassis consists of swappable line cards module.
+2.	Each line card consists of multiple external PHY ASIC. The external PHYs on line card must be the same.
 3.	Each line card can be
     *   plug in
     *	unplug out
 4.	Plug in
-    *	Event log with card number, card type
-    *	Automatically apply the configuration for that line card
+    *	Event log with card index.
+    *	Automatically apply the configuration for external PHY on line card
 5.	Unplug out
-    *	Event log with card number, card type
-    *	All ports on the line card are link down.
-    *	User still can configure the line card, but the configuration will not take effect until the line card is plugged in again.
-    *	This unplug-out event should not impact all other line cards’ traffic.
+    *	Event log with card index.
+    *	Both system side and line side are link down.
+    *	User still can configure the port, but the configuration will not take effect until the line card is plugged in again.
+    *	This unplug-out event should not impact all other external PHYs' traffic.
 
 
 ### 2.2 Configuration and Management Requirements<a name="configuration-and-management"></a>
@@ -121,8 +122,7 @@ A new table STATE_LINE_CARD_TABLE is created in state DB to store current status
 ```
 ;Defines schema for STATE_LINE_CARD_TABLE that stores line card status 
 key                = LINE_CARD|LINECARD_SLOT_INDEX
-status             = "present" / "not present"  ; line card present status. 
-speed              = 8DECDIG                    ; line card speed.
+status             = "present" / "not present" / "unknown" ; line card present status. 
 ```
 
 **redis-cli example**
@@ -131,8 +131,7 @@ speed              = 8DECDIG                    ; line card speed.
 127.0.0.1:6379[6]> hgetall "LINE_CARD|3"
 1) "status"
 2) "present"
-3) "speed"
-4) "100000"
+
 ```
 ## 3.5 SAI<a name="sai"></a>
 Switch SAI interface APIs are already defined but there is no line card related attributes. 
@@ -141,14 +140,11 @@ The table below represents the SAI attributes which shall be extended for line c
 ###### Table 1: switch SAI attributes
 | SAI attributes                                         | Line card component                        |
 |--------------------------------------------------------|--------------------------------------------|
-| SAI_SWITCH_ATTR_SWITCH_LINE_CARD_NOTIFY                | Event notification callback function       |
+| SAI_SWITCH_ATTR_LINE_CARD_NOTIFY                       | Event notification callback function       |
 | SAI_SWITCH_ATTR_LINE_CARD_STATUS                       | Line card state                            |
-| SAI_SWITCH_ATTR_LINE_CARD_SPEED                        | Line card speed                            |
 | SAI_SWITCH_ATTR_LINE_CARD_SLOTS                        | maximum number of supported line card slot |
 
 The **create_switch** SAI API is used to set the line card event change function. 
-This function is a porting layer API which be implemented by chip vendor to handle line card event change.  
-+ SAI_SWITCH_ATTR_SWITCH_LINE_CARD_NOTIFY  
 
 ```cpp
 /**
@@ -204,9 +200,6 @@ typedef struct _sai_switch_line_card_info_t
     /** Slot id */
     sai_uint8_t card_slot;
 
-    /** Speed */
-    sai_uint32_t speed;
-
     /** Status */
     sai_switch_line_card_status_t status;
 
@@ -229,11 +222,13 @@ The **get_switch_attribute** SAI API is used to get the attributes on switch whi
 typedef sai_status_t (*sai_get_switch_attribute_fn)(
         _In_ sai_object_id_t switch_id,
         _In_ uint32_t attr_count,
-        _Inout_ sai_attribute_t *attr_list); 
+        _Inout_ sai_attribute_t *attr_list);
+
+This function is a porting layer API which be implemented by chip vendor to handle line card event change.  
++ SAI_SWITCH_ATTR_SWITCH_LINE_CARD_NOTIFY  
 ```
 
 + SAI_SWITCH_ATTR_LINE_CARD_STATUS  
-+ SAI_SWITCH_ATTR_LINE_CARD_SPEED  
 + SAI_SWITCH_ATTR_LINE_CARD_SLOTS  
 
 ```cpp
@@ -244,14 +239,6 @@ typedef sai_status_t (*sai_get_switch_attribute_fn)(
      * @flags READ_ONLY
      */
     SAI_SWITCH_ATTR_LINE_CARD_STATUS,
-
-    /**
-     * @brief Line card speed
-     *
-     * @type sai_u32_list_t
-     * @flags READ_ONLY
-     */
-    SAI_SWITCH_ATTR_LINE_CARD_SPEED,
 
     /**
      * @brief Maximum number of supported line card slot on the switch
@@ -358,7 +345,7 @@ The application who subscribes the database will be notified. After all the subs
 To support hot plug-in and unplug-out, the system needs to subscribe line card event and re-apply configuration when line card status changes.
 
 In SONiC system, the “PortsOrch” will subscribe port change event, and doing action when port change.So portsOrch also involves the tasks of line card hot swapping.
-Since the system is only for 100G line card currently and the config_db.json will contain all ports configuration, the “PortsOrch” only need do “config load” action when receiving line card change event. This will trigger system to reconfigure all ports again.
+config_db.json will contain all ports configuration, the “PortsOrch” need do “config load” action when receiving line card change event. This will trigger system to reconfigure all ports again.
 The “config load” action will not affect ongoing traffic. So the Plug-in/Unplug-out action will not affect ongoing traffic.
 
 Following chart shows the reconfiguration flow in SONiC.
@@ -369,7 +356,7 @@ Following chart shows the reconfiguration flow in SONiC.
 
 1.	While Plug-in/Unplug-out line card, syncd will update the “Port State Table” for “Port Config Filter”.  
 2.	After receiving line card event, it will execute callback function and PUBLISH the event to Redis DB.
-3.	The “PortsOrch” will be notified when line card change.
+3.	The “PortsOrch” will be notified when line card state changes.
 4.	“PortsOrch” will do “config load”.
 
 The config flow will follow Figure5 to reapply the configuration to SAI.
@@ -390,7 +377,7 @@ There is no new configuration needed for line card hot swapping, so the mechanis
 
 ## 7 Scalability<a name="scalability"></a>
 
-Hot swapping line cards with different card types, ex, 100G X 32 and 400G X 8 on line card. 
+Line cards may consists of different external PHY. ex: 100G PHY * 4 or 400G PHY * 1 on line card. this feature should be supported.
 
 ## 8 Tests<a name="tests"></a>
 
@@ -414,6 +401,6 @@ Hot swapping line cards with different card types, ex, 100G X 32 and 400G X 8 on
     2.   The traffic forwarding shall not block when line card plug-in/unplug-out. (Traffic forwarding between 2 ports in 1st and swap operating in 2nd, 3rd and 4th with L3 traffic flow)
 
 ## 9 Unsupported features<a name="unsupported"></a>
-The current mechanism does not consider the hot swapping between line cards with different types, ex, 100G and 400G.
+The current mechanism does not consider the hot swapping between line cards with different external PHY.
 
 
