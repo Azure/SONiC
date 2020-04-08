@@ -17,8 +17,9 @@
     * [3.3 Syncd Changes](#syncd-changes) 
     * [3.4 DB Changes](#db-changes)  
         * [3.4.1 State DB](#state-db)
-    * [3.5 SAI](#sai)  
-    * [3.6 CLI](#cli)
+    * [3.5 SAI PHY](#sai)  
+    * [3.6 PMON](#pmon)
+    * [3.7 CLI](#cli)
 * [4 Flows](#flows)  
     * [4.1 Initialization](#initialization)  
         * [4.1.1 Event Callback Registration](#event-callback)
@@ -38,9 +39,10 @@ This document describes the software high-level design of line card hot swapping
 
 ## Revision<a name="revision"></a>
 
-| Rev | Date       | Author         | Description                       |
-|:---:|:----------:|:--------------:|:----------------------------------|
-| 0.1 | 05/02/2020 | Fish, Steve    | Initial version                   |
+| Rev | Date       | Author         | Description                        |
+|:---:|:----------:|:--------------:|:-----------------------------------|
+| 0.1 | 05/02/2020 | Fish, Steve    | Initial version                    |
+| 0.2 | 24/02/2020 | Fish, Steve    | Integrate with Gearbox architecture|
 
 ## Abbreviation<a name="abbreviation"></a>
 
@@ -50,17 +52,14 @@ This document describes the software high-level design of line card hot swapping
 |DB        |Date base                                                     |
 |CLI       |Command-Line Interface                                        |
 |IPC	   |Inter Process communication                                   |
-|line card |A swappable cage which may consists of multiple external PHYs |
+|line card |A swappable cage which consists of at least one external PHYs |
 
 ## List of figures<a name="list-of-figures"></a>
-[Figure 1: Line Card Hot Swap High Level Architecture](./f1.jpg)  
-[Figure 2: Event callback registration](./f2.jpg)  
-[Figure 3: State table update](./f3.jpg)  
-[Figure 4: Port Initialize_1](./f4.jpg)  
-[Figure 5: Port Initialize_2](./f5.jpg)  
-[Figure 6: Line Card Event Notification](./f6.jpg)  
-[Figure 7: Line Card Event Notification Flow](./f7.jpg)  
-[Figure 8: Reapply Configuration flow](./f8.jpg)  
+[Figure 1: Line Card Hot Swap High Level Architecture](./Arch.jpg)  
+[Figure 2: State table update](./state_update.jpg
+[Figure 3: PHY Initialization](./init.jpg)
+[Figure 4: Line Card Event Notification](./linecard_status_change.jpg)
+[Figure 5: [Reconfiguration Flow](./reconfiguration.jpg)
 
 ## 1 Introduction and Scope<a name="introduction"></a>
 
@@ -74,7 +73,7 @@ This HLD provides a generic software mechanism of line card hot swapping, which 
 
 **This feature will support the following functionality:**
 1.	A chassis consists of swappable line cards module.
-2.	Each line card consists of multiple external PHY ASIC. The external PHYs on line card must be the same.
+2.	Each line card consists of at least one external PHY ASIC. The external PHYs on line card must be the same.
 3.	Each line card can be
     *   plug in
     *	unplug out
@@ -85,7 +84,7 @@ This HLD provides a generic software mechanism of line card hot swapping, which 
     *	Event log with card index.
     *	Both system side and line side are link down.
     *	User still can configure the port, but the configuration will not take effect until the line card is plugged in again.
-    *	This unplug-out event should not impact all other external PHYs' traffic.
+    *	This unplug-out event should not impact all other line cards' traffic.
 
 
 ### 2.2 Configuration and Management Requirements<a name="configuration-and-management"></a>
@@ -97,16 +96,17 @@ Provide CLI commands to display line card status.
 ### 3.1 Architecture<a name="architecture"></a>
 The architecture and module dependency are shown in the following figure.
 
-![Line Card Hot Swap High Level Architecture](./f1.jpg "Figure 1: Line Card Hot Swap High Level Architecture")
+![Line Card Hot Swap High Level Architecture](./Arch.jpg "Figure 1: Line Card Hot Swap High Level Architecture")
 
 ###### Figure 1: Line Card Hot Swap High Level Architecture
 
-Figure 1 shows the integration of line card hot swap design and SONiC architecture. SAI layer needs to receive the line card state change event from line card driver. In the design, SAI always listens to line card change event. The line card kernel module is in charge of detecting line card status. After boot up, this kernel module should be inserted automatically.
+Figure 1 shows the integration of line card hot swap design and Gearbox architecture of SONiC. PMON needs to receive the line card state change event from line card driver. The line card kernel module is in charge of detecting line card status. After boot up, this kernel module should be inserted automatically. 
+In the design of Gearbox, SAI PHY always listens to External PHY change event. Although the line card consists of multiple external PHY, the event notification flow of line card and PHY are different because line card is Penetration layer between PHY and MAC.
 
 
 ### 3.2 OrchAgent Changes<a name="orchagent-changes"></a>
 
-OrchAgent will register an event callback function to publish the line card hot swapping events to DB and PortsOrch will be responsible for processing the line card events.
+OrchAgent will register an event callback function to publish the PHY status change events to DB and PortsOrch will be responsible for processing PHY status changes events.
 
 ### 3.3 Syncd Changes<a name="syncd-changes"></a>
 
@@ -133,18 +133,16 @@ status             = "present" / "not present" / "unknown" ; line card present s
 2) "present"
 
 ```
-## 3.5 SAI<a name="sai"></a>
-Switch SAI interface APIs are already defined but there is no line card related attributes. 
+## 3.5 SAI PHY<a name="sai"></a>
+Switch SAI PHY interface APIs are already defined in Gearbox proposal but there is no swappable attributes. 
 The table below represents the SAI attributes which shall be extended for line card hot swap design.
 
 ###### Table 1: switch SAI attributes
-| SAI attributes                                         | Line card component                        |
-|--------------------------------------------------------|--------------------------------------------|
-| SAI_SWITCH_ATTR_LINE_CARD_NOTIFY                       | Event notification callback function       |
-| SAI_SWITCH_ATTR_LINE_CARD_STATUS                       | Line card state                            |
-| SAI_SWITCH_ATTR_LINE_CARD_SLOTS                        | maximum number of supported line card slot |
+| SAI attributes                                  | Line card component                                  |
+|-------------------------------------------------|------------------------------------------------------|
+| SAI_SWITCH_ATTR_SWAPPABLE                       | describes the external PHY is swappable or not       |
 
-The **create_switch** SAI API is used to set the line card event change function. 
+The **create_switch** SAI PHY API is used to set wheather the external PHY is swappable. 
 
 ```cpp
 /**
@@ -164,94 +162,23 @@ typedef sai_status_t (*sai_create_switch_fn)(
         _Out_ sai_object_id_t *switch_id,
         _In_ uint32_t attr_count,
         _In_ const sai_attribute_t *attr_list);
-        
-/**
- * @brief Switch line card event notification.
- *
- * For notify when line card status change
- *
- * @count data[count]
- *
- * @param[in] count Number of notifications
- * @param[in] data Array of line card status
- */
-typedef void (*sai_switch_line_card_notification_fn)(
-        _In_ uint32_t count,
-        _In_ const sai_switch_line_card_info_t *data);
-
-
-    /**
-     * @brief Event notification callback
-     * function passed to the adapter.
-     *
-     * Use sai_switch_line_card_notification_fn as notification function.
-     *
-     * @type sai_pointer_t sai_switch_line_card_notification_fn
-     * @flags CREATE_AND_SET
-     * @default NULL
-     */
-    SAI_SWITCH_ATTR_SWITCH_LINE_CARD_NOTIFY,
-    
-/**
- * @brief Attribute data for line card status notify
- */
-typedef struct _sai_switch_line_card_info_t
-{
-    /** Slot id */
-    sai_uint8_t card_slot;
-
-    /** Status */
-    sai_switch_line_card_status_t status;
-
-} sai_switch_line_card_info_t;
 
 ```
+In SAI, **the platform provider should provide PHY and line card mapping relationship**. This mapping list can be described in platform_nos_config of Gearbox.
 
-The **get_switch_attribute** SAI API is used to get the attributes on switch which were listed in Table 1.  
 
-```cpp
-/**
- * @brief Get switch attribute value
- *
- * @param[in] switch_id Switch id
- * @param[in] attr_count Number of attributes
- * @param[inout] attr_list Array of switch attributes
- *
- * @return #SAI_STATUS_SUCCESS on success, failure status code on error
- */
-typedef sai_status_t (*sai_get_switch_attribute_fn)(
-        _In_ sai_object_id_t switch_id,
-        _In_ uint32_t attr_count,
-        _Inout_ sai_attribute_t *attr_list);
+### 3.6 PMON<a name="pmon"></a>
+In PMON container, there are lots of daemon to monitor the device. We add a daemon to monitor line card status. Device manufacturer should implement these line card class
+if their device support this feature. 
 
-This function is a porting layer API which be implemented by chip vendor to handle line card event change.  
-+ SAI_SWITCH_ATTR_SWITCH_LINE_CARD_NOTIFY  
+```python
+def _wrapper_get_linecard_change_event(timeout):
+def _wrapper_get_linecard_info(line_card_index):
+def _wrapper_get_linecard_presence(line_card_index):
+def _wrapper_init_linecard(line_card_index):
+
 ```
-
-+ SAI_SWITCH_ATTR_LINE_CARD_STATUS  
-+ SAI_SWITCH_ATTR_LINE_CARD_SLOTS  
-
-```cpp
-    /**
-     * @brief Line card state
-     *
-     * @type sai_u8_list_t
-     * @flags READ_ONLY
-     */
-    SAI_SWITCH_ATTR_LINE_CARD_STATUS,
-
-    /**
-     * @brief Maximum number of supported line card slot on the switch
-     *
-     * @type sai_uint8_t
-     * @flags READ_ONLY
-     */
-    SAI_SWITCH_ATTR_LINE_CARD_SLOTS,
-```
-In SAI, **the chip vendor should provide an IPC method to receive the line card event**. **Platform provider will based on this method to send the event**.
-Hence, the rest of implementation effort would be platform dependent driver.
-
-### 3.6 CLI<a name="cli"></a>
+### 3.7 CLI<a name="cli"></a>
 
 **This feature will support the following commands:**
 show interface status: display Line card present status and card slots number of each port.
@@ -275,97 +202,77 @@ admin@sonic:~$ show interface status
 ## 4 Flows<a name="flows"></a>
 ### 4.1 Initialization<a name="initialization"></a>
 #### 4.1.1 Event Callback Registration<a name="event-callback"></a>
-For notifying the SONiC system when line card state changes, the orchagent will register a callback function at system initialization.
-
-Figure 2 shows the flow of event callback registration.
-
-![Event callback registration](./f2.jpg "Figure 2: Event callback registration")
-
-###### Figure 2: Event callback registration
-
-1.	At orchagent initialization, orchagent will call the SAI-Redis create_switch() to register event callback function for all line card event types.
-2.	This will trigger Syncd to call create_switch() in SAI and register event callback function for all event type.
-3.	The process who wants to get the event notifications, can directly subscribe on Redis DB.
+For notifying the SONiC system when line card state changes, we design a status change wrapper function in PMON. This function should be implemented by device manufacturer.
 
 #### 4.1.2 Port State Table<a name="port-state-table"></a>
 
-At initialization, syncd creates an empty Port State Table, and then gets current line card status to store each port status into Port State Table.
+At initialization, phy syncd creates an empty Port State Table, and then gets phy status to store each port status into Port State Table.
 
-When a line card is inserted or removed, syncd will get the event and will update the line card status into the Port Status Table, as shown in Figure 3.
+When a line card is inserted or removed, phy syncd will get the event and will update the PHY status into the Port Status Table, as shown in Figure 3.
 
-![State table update](./f3.jpg "Figure 3: State table update")
+![State table update](./state_update.jpg "Figure 2: State table update")
 
 
-###### Figure 3: State table update
+###### Figure 2: State table update
 
-When user needs to configure a port via SAI, it will check the port status in Port State Table.  If the port is not present, SAI will not configure the port and return SUCCESS to forge the successful configuration.
+When user needs to configure a port via SAI, it will check the port status in Port State Table.  If the PHY is linkdown on system side, SAI will not configure the port and return SUCCESS to forge the successful configuration.
 
 #### 4.1.3 Port initialize<a name="port-initialize"></a>
 
-Figure 4 shows the port initialization flow when boot up.
+Port initialization follows the initail flow of Gearbox.
+
+1.	Load ASIC SAI library  
+2.	Get asic_api_initialize & asic_api_query API’s 
+3.	Initialize NPU
+4.	Get Default Ports Created as part of switch initialization by config file passsd.
+
+![PHY Initialization](./init.jpg "Figure 3: PHY Initialization")
+###### Figure 3: PHY Initialization
+We extend the field of the configuration file. This field describes the mapping relationship between PHY and line card slot.
+```
+#PHY-ID   PHY-NAME    PHY-ADDR  PHY_LIB_NAME               FIRMWARE_PATH         PHY_CONFIG_FILE    PHY_ACCESS  BUS_ID 
+0         example-1   0x1000    libsai_phy_example1.so     /tmp/phyexample1.bin  phy_1_config_file  MDIO(NPU)   0 
+1         example-2   0x2000    libsai_phy_example2.so     /tmp/phyexample1.bin  phy_2_config_file  I2C         1
 
 
-![Port Initialize_1](./f4.jpg "Figure 4: Port Initialize")
-
-###### Figure 4: Port Initialize_1
-
-1.	PortsOrch will use SAI-Redis to get current line card information before port initialization starts.
-
-![Port Initialize_2](./f5.jpg "Figure 5: Port Initialize")
-
-###### Figure 5: Port Initialize_2
-2.	When port initialization starts, the “portsyncd” will get all port configuration from CONFIG_DB.
-3.	And “portsyncd” will sync the port configuration to APPL_DB.
-4.	“PortsOrch” will be notified when APPL_DB port configuration change.
-5.	“PortsOrch” initializes ports base on APPL_DB.
-6.	The configuration action will send to SDK via syncd.
-7.	The syncd does not apply configurations onto the absent ports.
-
+# name    lanes alias           index speed  PHY-ID system-lanes system-lane-speed line-lanes  line-lane-speed line-card-slot
+Ethernet0 1,2   hundredGigE1/1  1     100000 0      38, 39       50G               30,31,32,33 25G                          1
+Ethernet1 3,4   hundredGigE1/2  1     100000 0      40, 41       50G               34,35,36,37 25G                          1
+Ethernet2 5,6   hundredGigE1/3  1     100000 1      4,5          50G               0,1,2,3     25G                          2
+```
 ### 4.2 Line Card Event Notification:<a name="notification"></a>
 
-![Line Card Event Notification](./f6.jpg "Figure 6: Line Card Event Notification")
-
-###### Figure 6: Line Card Event Notification
-
-Figure 6 shows the notification flow of line card event. The platform provider need to provide the line card driver to send notification to SAI layer.
-Both interrupt mode and polling mode can be implemented. Whether in interrupt mode or polling mode, when a line card state change event is detected, the kernel module should send the event to user space through IPC method. 
-SAI receives the line card change event and log the event to syslog. To notify the SONiC, SAI will execute the callback function. In SONiC, the callback function is in charge of sending a notification to database. 
+Figure 4 shows the notification flow of line card event. The device manufacturer need to provide the line card driver to read the line card status.
+when a line card state change event is detected. pmon receives the line card change event and log the event to syslog. To notify the SONiC, pmon will execute the callback function and send a notification to database. 
 The application who subscribes the database will be notified. After all the subscriber receive the notification, the notification in database will be erased.
 
-![Line Card Event Notification](./f7.jpg "Figure 7: Line Card Event Notification Flow")
+![Line Card Event Notification](./linecard_status_change.jpg "Figure 4: Line Card Event Notification Flow")
 
-###### Figure 7: Line Card Event Notification Flow
-1.	Platform driver send line card event via IPC.
-2.	SAI and SDK receive line card event and execute call back function.
-3.	Syncd will publish this event via STATE_DB. All subscribers will be notified by STATE_DB.
-
+###### Figure 4: Line Card Event Notification Flow
+1.	Platform daemon polling line card event.
+2.	Device manufacturer implement the function class to read present status and send the event wile status changes.
+3.	pmon will publish this event to STATE_DB. All subscribers will be notified by STATE_DB.
 
 ### 4.3 Re-apply Configuration on Line Card<a name="reapply"></a>
 
 To support hot plug-in and unplug-out, the system needs to subscribe line card event and re-apply configuration when line card status changes.
 
-In SONiC system, the “PortsOrch” will subscribe port change event, and doing action when port change.So portsOrch also involves the tasks of line card hot swapping.
+In SONiC system, the “PortsOrch” will subscribe line card change event, and doing action when port change.So portsOrch also involves the tasks of line card hot swapping.
 config_db.json will contain all ports configuration, the “PortsOrch” need do “config load” action when receiving line card change event. This will trigger system to reconfigure all ports again.
 The “config load” action will not affect ongoing traffic. So the Plug-in/Unplug-out action will not affect ongoing traffic.
 
 Following chart shows the reconfiguration flow in SONiC.
 
-![Reapply Configuration flow](./f8.jpg "Figure 8: Reapply Configuration flow")
+1.	While Plug-in/Unplug-out line card, phy syncd will update the “Port State Table” for “Port Config Filter”.  
+2.	After receiving line card event in pmon, it will execute callback function and PUBLISH the event to Redis DB.
+3.	The “PortsOrch” will be notified when receiving both line card state and PHY status changes.
+4.	“PortsOrch” will do “config load” while Plug-in line card again. 
 
-###### Figure 8: Reapply Configuration flow
+The config flow will follow Figure 5 to reapply the configuration to SAI.
 
-1.	While Plug-in/Unplug-out line card, syncd will update the “Port State Table” for “Port Config Filter”.  
-2.	After receiving line card event, it will execute callback function and PUBLISH the event to Redis DB.
-3.	The “PortsOrch” will be notified when line card state changes.
-4.	“PortsOrch” will do “config load”.
+![Reconfiguration Flow](./reconfiguration.jpg "Figure 5: Reconfiguration Flow")
 
-The config flow will follow Figure5 to reapply the configuration to SAI.
-
-5.	“Portsyncd” will be notified when port configuration be set in CONFIG_DB.
-6.	And synchronize to APPL_DB
-7.	“PortsOrch” will be notified when port configuration be set in APPL_DB
-8.	“PortsOrch” apply the configurations.
-9.	The configuration will send to SDK via syncd. Again, syncd will filter out the configuration for not-present ports.
+###### Figure 5: Reconfiguration Flow
 
 ## 5 Serviceability and Debug<a name="serviceability"></a> 
 
