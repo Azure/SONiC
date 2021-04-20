@@ -3,6 +3,7 @@ PVST
 # High Level Design Document
 #### Rev 1.0
 
+
 # Table of Contents
   * [List of Tables](#list-of-tables)
   * [Revision](#revision)
@@ -47,6 +48,8 @@ PVST
 | 0.2 | 05/02/2019  |     Sandeep, Praveen       | Incorporated Review comments  |
 | 0.3 | 06/25/2019  |     Sandeep, Praveen       | Incorporated Review comments  |
 | 1.0 | 10/15/2019  |     Sandeep, Praveen       | Minor changes post implementation |
+| 1.1 | 11/26/2019  |     Sandeep, Praveen       | Change table names from INTF to PORT  |
+
 
 
 # About this Manual
@@ -163,17 +166,17 @@ Following config DB schemas are defined for supporting this feature.
     priority        = 5*DIGIT					; bridge priority (0 to 61440, DEF:32768)
     enabled         = "true"/"false"            ; spanning-tree is enabled or not
 
-### STP_VLAN_INTF_TABLE
-    ;Stores STP interface details per VLAN
+### STP_VLAN_PORT_TABLE
+    ;Stores STP port details per VLAN
     ;Status: work in progress
-    key             = STP_VLAN_INTF|"Vlan"vlanid|ifname         ; VLAN+Intf with prefix "STP_VLAN_INTF" ifname can be physical or port-channel name
+    key             = STP_VLAN_PORT|"Vlan"vlanid|ifname         ; VLAN+Port with prefix "STP_VLAN_PORT" ifname can be physical or port-channel name
     path_cost       = 9*DIGIT                                   ; port path cost (1 to 200000000) 
     priority        = 3*DIGIT                                   ; port priority (0 to 240, DEF:128)
 
-### STP_INTF_TABLE
-    ;Stores STP interface details
+### STP_PORT_TABLE
+    ;Stores STP port details
     ;Status: work in progress
-    key                    = STP_INTF|ifname			; ifname with prefix STP_INTF, ifname can be physical or port-channel name
+    key                    = STP_PORT|ifname			; ifname with prefix STP_PORT, ifname can be physical or port-channel name
     enabled                = BIT			                ; is the STP on port enabled (1) or disabled (0)
     root_guard             = BIT		        	        ; is the root guard on port enabled (1) or disabled (0)
     bpdu_guard             = BIT				        ; is the bpdu guard on port enabled (1) or disabled (0)
@@ -205,10 +208,11 @@ Following config DB schemas are defined for supporting this feature.
     root_forward_delay    = 1*2DIGIT			        ; forward delay as per root bridge
     stp_instance          = 1*4DIGIT			        ; STP instance for this VLAN
 
-### STP_VLAN_INTF_TABLE
-    ;Stores STP VLAN interface details 
+
+### STP_VLAN_PORT_TABLE
+    ;Stores STP VLAN port details 
     ;Status: work in progress
-    key                 = STP_VLAN_INTF:"Vlan"vlanid:ifname     ; VLAN+Intf with prefix "STP_VLAN_INTF"
+    key                 = STP_VLAN_PORT:"Vlan"vlanid:ifname     ; VLAN+Port with prefix "STP_VLAN_PORT"
     port_num            = 1*3DIGIT                              ; port number of bridge port
     path_cost           = 1*9DIGIT                              ; port path cost (1 to 200000000)
     priority            = 3*DIGIT                               ; port priority (0 to 240, DEF:128)
@@ -224,10 +228,11 @@ Following config DB schemas are defined for supporting this feature.
     tcn_received        = 1*10DIGIT                             ; tcn received
     root_guard_timer    = 1*3DIGIT                              ; root guard current timer value
 
-### STP_INTF_TABLE
-    ;Stores STP interface details
+
+### STP_PORT_TABLE
+    ;Stores STP port details
     ;Status: work in progress
-    key                    = STP_INTF:ifname			           ; ifname with prefix STP_INTF, ifname can be physical or port-channel name
+    key                    = STP_PORT:ifname			           ; ifname with prefix STP_PORT, ifname can be physical or port-channel name
     bpdu_guard_shutdown    = "yes" / "no"                          ; port disabled due to bpdu-guard
     port_fast              = "yes" / "no"                          ; port fast is enabled or not
 
