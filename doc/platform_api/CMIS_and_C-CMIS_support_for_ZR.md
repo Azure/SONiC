@@ -13,6 +13,7 @@ The rest of the article will discuss the following items:
 - Definition on CMIS and C-CMIS registers
 - Method to read from and write to registers
 - High level functions
+- Module firmware upgrade using command data block (CDB)
 
 ### Layered architecture to access registers
           ---------------------------
@@ -483,7 +484,7 @@ def get_PM(port):
     rx_max_corr_bits_subint_pm = read_reg_from_dict(port, Page34h.RX_MAX_CORR_BITS_SUB_INTERVAL_PM)
 
     if (rx_bits_subint_pm != 0) and (rx_bits_pm != 0):
-        PM_dict['preFEC_BER_cur'] = rx_corr_bits_pm*1.0/rx_bits_subint_pm
+        PM_dict['preFEC_BER_cur'] = rx_corr_bits_pm*1.0/rx_bits_pm
         PM_dict['preFEC_BER_min'] = rx_min_corr_bits_subint_pm*1.0/rx_bits_subint_pm
         PM_dict['preFEC_BER_max'] = rx_max_corr_bits_subint_pm*1.0/rx_bits_subint_pm
 
@@ -621,7 +622,7 @@ def set_laser_freq(port, freq):
 
     # Channel number n for 75 GHz grid spacing
     # Frequency (THz) = 193.1 + n * 0.025, where n must be divisible by 3.
-    channel_number = round((freq - 193.1)/0.025)
+    channel_number = int(round((freq - 193.1)/0.025))
     if channel_number % 3 is not 0:
         print('Error! Frequency has to be in 75 GHz grid!')
         return
@@ -648,3 +649,114 @@ def set_laser_freq(port, freq):
     else:
         print('Error! Tuning failed!')
 ```
+### Module firmware upgrade using command data block (CDB)
+This section discusses the details of implementing firmware upgrade using CDB message communication. Figure 7-4 in [CMIS](http://www.qsfp-dd.com/wp-content/uploads/2019/05/QSFP-DD-CMIS-rev4p0.pdf) defines the flowchart for upgrading the module firmware. 
+
+The first step is to obtain CDB features supported by the module from CDB command 0041h, such as start local payload size, maximum block size, whether extended payload messaging (page 0xA0 - 0xAF) or only local payload is supported. These features are important because the following upgrade with depend on these parameters. 
+
+The second step is to start CDB download by writing the first 116 bytes (usually the header) from the designated firmware file to the local payload page 0x9F, with CDB command 0101h. 
+
+The third step is to repeatedly read from the given firmware file and write to the payload space advertised from the first step. We use CDB command 0103h to write to the local payloadl; we use CDB command 0104h to write to the extended paylaod. This step repeats until it reaches end of the firmware file, or the CDB status failed.
+
+The last step is to complete the firmware upgrade with CDB command 0107h. 
+
+Note that if the download process fails anywhere in the middle, we need to run CDB command 0102h to abort the upgrade before we restart another upgrade process. 
+
+After the firmware download finishes. The firmware will be run and committed with CDB command 0109h and 010Ah. We also check the currently running and committed firmware iamge version by CDB command 0100h before and after the entire firmware upgrade process to confirm the module switched to the updated firmware. 
+
+A CDB command is triggered when byte 0x9F: 129 is written. This requires we break a CDB command into two written pieces:
+1. write bytes from 0x9F: 130 till the message ends.
+2. write bytes 0x9F: 128-129.
+A single write command from 0x9F: 128 until the message ends should be avoided. 
+
+
+Sample code to run firmware upgrade from high level functions:
+```
+import CDB_operations as cdb_oper
+
+def module_firmware_upgrade(port, filepath):
+    cdb_oper.get_module_FW_info(port)
+    startLPLsize, maxblocksize, lplonly_flag = cdb_oper.get_module_FW_upgrade_features(port)
+    cdb_oper.module_FW_download(port, startLPLsize, maxblocksize, lplonly_flag, filepath)
+    cdb_oper.module_FW_run(port)
+    time.sleep(60)
+    cdb_oper.module_FW_commit(port)
+    cdb_oper.get_module_FW_info(port)
+```
+
+Sample *CDB_operations* code (partial) to get module firmware information:
+```
+import cmisCDB as cdb
+
+def get_module_FW_info(port):
+    # get fw info (CMD 0100h)
+    starttime = time.time()
+    print('Get module FW info')
+    rlplen, rlp_chkcode, rlp = cdb.cmd0100h(port)
+    if cdb.cdb_chkcode(rlp) == rlp_chkcode:
+        # Regiter 9Fh:136
+        fwStatus = rlp[0]
+        # Registers 9Fh:138,139; 140,141
+        print('Image A Version: %d.%d; BuildNum: %d' %(rlp[2], rlp[3], ((rlp[4]<< 8) | rlp[5])))
+        # Registers 9Fh:174,175; 176.177
+        print('Image B Version: %d.%d; BuildNum: %d' %(rlp[38], rlp[39], ((rlp[40]<< 8) | rlp[41])))
+
+        ImageARunning = (fwStatus & 0x01) # bit 0 - image A is running
+        ImageACommitted = ((fwStatus >> 1) & 0x01) # bit 1 - image A is committed
+        ImageBRunning = ((fwStatus >> 4) & 0x01) # bit 4 - image B is running
+        ImageBCommitted = ((fwStatus >> 5) & 0x01)  # bit 5 - image B is committed
+
+        if ImageARunning == 1: 
+            RunningImage = 'A'
+        elif ImageBRunning == 1:
+            RunningImage = 'B'
+        if ImageACommitted == 1:
+            CommittedImage = 'A'
+        elif ImageBCommitted == 1:
+            CommittedImage = 'B'
+        print('Running Image: %s; Committed Image: %s' %(RunningImage, CommittedImage))
+    else:
+        raise ValueError, 'Reply payload check code error'
+    elapsedtime = time.time()-starttime
+    print('Get module FW info time: %.2f s' %elapsedtime) 
+```
+The output of *get_module_FW_info* function:
+```
+>>> get_module_FW_info(port)
+Get module FW info
+Image A Version: 1.1; BuildNum: 4
+Image B Version: 0.11; BuildNum: 127
+Running Image: A; Committed Image: A
+```
+
+Sample code in *cmisCDB* to support *get_module_FW_info* function:
+
+```
+LPLPAGE = 0x9f
+INIT_OFFSET = 128
+CMDLEN = 2
+
+# Get FW info
+def cmd0100h(port):
+    cmd = bytearray(b'\x01\x00\x00\x00\x00\x00\x00\x00')
+    cmd[133-INIT_OFFSET] = cdb_chkcode(cmd)
+    write_cdb(port,cmd)
+    while cdb1_chkstatus(port):
+        time.sleep(0.1)
+    return read_cdb(port)
+    
+def cdb_chkcode(cmd):
+    checksum = 0
+    for byte in cmd:
+        checksum += byte   
+    return 0xff - (checksum & 0xff)
+
+def cdb1_chkstatus(port):
+    status = read_reg_from_dict(port, Page00h_Lower.CDB1_STATUS)
+    return bool(status & 0x80)
+
+def write_cdb(port,cmd):
+    write_reg(port, LPLPAGE, INIT_OFFSET+CMDLEN, len(cmd)-CMDLEN, cmd[CMDLEN:])
+    write_reg(port, LPLPAGE, INIT_OFFSET, CMDLEN, cmd[:CMDLEN])
+```
+
