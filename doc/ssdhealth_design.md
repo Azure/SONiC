@@ -69,7 +69,7 @@ It will import device plugin `ssdutil.py` and print the output returned by diffe
 
 **Syntax:**
 
-	root@mts-sonic-dut:/home/admin# ssdhealth -h
+	root@mts-sonic-dut:/home/admin# ssdutil -h
 	usage: ssdhealth -d DEVICE [-h] [-v] [-e]
 	
 	Show disk device health status
@@ -81,22 +81,22 @@ It will import device plugin `ssdutil.py` and print the output returned by diffe
 	  -e, --vEndor          show vendor specific disk information
 	
 	Examples:
-	  ssdhealth -d /dev/sda
-	  ssdhealth -d /dev/sda -v
-	  ssdhealth -d /dev/sda -e
+	  ssdutil -d /dev/sda
+	  ssdutil -d /dev/sda -v
+	  ssdutil -d /dev/sda -e
 
 
 #### Plugins design
 ##### Class SsdBase
 Location: `sonic-buildimage/src/sonic-platform-common/sonic_platform_base/sonic_ssd/ssd_base.py`  
-Generic implementation of the API. Will use specific utilities for known disks or the `systemctl` utility for others. Since not all disk models are in smartctl's database, some information can be unavailable or incomplete.
+Generic implementation of the API. Will use specific utilities for known disks or the `smartctl` utility for others. Since not all disk models are in smartctl's database, some information can be unavailable or incomplete.
 
     class SsdBase:
       ...
 
 ##### Class SsdUtil
 Inherited from SsdBase. Can be implemented by vendors to provide detailed info about the disk installed.  
-Location: `sonic-buildimage/device/{{vendor}}/platform/plugins/ssdutil.py`  
+Location: `sonic-buildimage/device/{{vendor}}/platform/plugins/ssd_util.py`  
                            
     class SsdUtil(SsdBase):
       ...
@@ -152,4 +152,3 @@ Daemon in Pmon (ssdmond) which will periodically query disk health (get_health()
 ## Open questions
 1. Daemon and monitoring?
 2. SNMP needed?
-
