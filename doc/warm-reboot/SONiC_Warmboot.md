@@ -58,6 +58,7 @@ Table of Contents
   * [Approach evaluation](#approach-evaluation-1)
     * [Advantages](#advantages-1)
     * [Concerns/Issues with this approach](#concernsissues-with-this-approach-1)
+* [Service container warm restart](#service-container-warm-restart)
 * [Open issues](#open-issues)
   * [How to do version control for software upgrade at docker level?](#how-to-do-version-control-for-software-upgrade-at-docker-level)
   * [Rollback support in SONiC](#rollback-support-in-sonic)
@@ -325,6 +326,18 @@ One possible but kind of extreme solution is: Always flush all related appDB tab
 * Highly complex logic in syncd
 * Warm restart of upper layer applications closely coupled with syncd.
 * Various corner cases from SAI object model and changes in SAI object model itself have to be handled.
+
+# Service container warm restart
+* Service container warm restrt is the fundation of warm reboot. It is generally supported already.
+* Code clean up to improve use-ability of service container warm restart is needed.
+* Scope: swss, syncd, bgp, teamd, radv.
+* Goals:
+  * Encapculate warm shutdown/recover knowledge in service script instead of warm-reboot script.
+  * Each service script handles how to stop / start service in warm / fast /cold scenarios.
+  * The warm-reboot script handles the ordering of service shutdown and reboot.
+* Exception:
+  * syncd pre-shutdown is only needed for warm reboot. This behavior stays in warm-reboot script.
+  * Configuration to enable service container warm restart stays outside the service scripts.
 
 # Open issues
 
