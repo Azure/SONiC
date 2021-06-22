@@ -261,25 +261,26 @@ Options:
 
 Commands:
   all          Show all PCIe AER attributes
-  correctable  Show PCIe AER correctable attributes
-  fatal        Show PCIe AER fatal attributes
-  non-fatal    Show PCIe AER non-fatal attributes
+  correctable  Show correctable PCIe AER attributes
+  fatal        Show fatal PCIe AER attributes
+  non-fatal    Show non-fatal PCIe AER attributes
 root@sonic:/home/admin#
 ```
 
-Each "pcie-aer" sub command has below options:
+Each "pcie-aer" sub command displays only non-zero AER stats by default and has below options:
 - `-d/--device <Bus>:<Dev>.<Fn>` - Display stats only for the specified device
-- `-nz/--no-zero` -  Display only devices with non-zero AER stats
+- `-v/--verbose` - Display all stats
 
 ```
 root@sonic:/home/admin# pcieutil pcie-aer all --help
 Usage: pcieutil pcie-aer all [OPTIONS]
 
   Show all PCIe AER attributes
+  (Default: Display only non-zero attributes)
 
 Options:
   -d, --device <BUS>:<DEV>.<FN>  Display stats only for the specified device
-  -nz, --no-zero                 Display non-zero AER stats
+  -v, --verbose                  Display all stats
   --help                         Show this message and exit.
 root@sonic:/home/admin#
 ```
@@ -288,6 +289,28 @@ Sample output:
 
 ```
 root@sonic:/home/admin# pcieutil pcie-aer all
++---------------------+-----------+-----------+
+| AER - CORRECTABLE   |   01:00.0 |   01:00.1 |
+|                     |    0xb960 |    0xb960 |
++=====================+===========+===========+
+| BadTLP              |         2 |         2 |
++---------------------+-----------+-----------+
+| BadDLLP             |         3 |         0 |
++---------------------+-----------+-----------+
+| TOTAL_ERR_COR       |         5 |         2 |
++---------------------+-----------+-----------+
+
++--------------------+-----------+
+| AER - NONFATAL     |   01:00.1 |
+|                    |    0xb960 |
++====================+===========+
+| UnsupReq           |         3 |
++--------------------+-----------+
+| TOTAL_ERR_NONFATAL |         3 |
++--------------------+-----------+
+
+root@sonic:/home/admin#
+root@sonic:/home/admin# pcieutil pcie-aer all -v
 +---------------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+
 | AER - CORRECTABLE   |   00:01.0 |   00:02.0 |   00:03.0 |   00:04.0 |   00:0f.0 |   00:13.0 |   00:14.0 |   00:14.1 |   00:14.2 |   01:00.0 |   01:00.1 |
 |                     |    0x1f10 |    0x1f11 |    0x1f12 |    0x1f13 |    0x1f16 |    0x1f15 |    0x1f41 |    0x1f41 |    0x1f41 |    0xb960 |    0xb960 |
@@ -394,7 +417,7 @@ root@sonic:/home/admin# pcieutil pcie-aer all
 +--------------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+
 
 root@sonic:/home/admin#
-root@sonic:/home/admin# pcieutil pcie-aer correctable -d 00:01.0
+root@sonic:/home/admin# pcieutil pcie-aer correctable -d 00:01.0 -v
 +---------------------+-----------+
 | AER - CORRECTABLE   |   00:01.0 |
 |                     |    0x1f10 |
