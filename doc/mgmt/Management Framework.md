@@ -59,8 +59,18 @@
                 * [3.2.2.4.14 DB Schema](#322414-db-schema)
                 * [3.2.2.4.15 API Documentation](#322415-api-documentation)
             * [3.2.2.5 gNMI server](#3225-gnmi-server)
-			    * [3.2.2.5.1 Files changed/added](#32251-files-changed/added)
-				* [3.2.2.5.2 Sample Requests](#32253-sample-requests)
+                * [3.2.2.5.1 Files changed and added](#32251-files-changed-and-added)
+                * [3.2.2.5.2 Sample Requests](#32252-sample-requests)
+                * [3.2.2.5.3 Authentication](#32253-authentication)
+                * [3.2.2.5.4 Error Response](#32254-error-response)
+                * [3.2.2.5.5 DB Schema](#32255-db-schema)
+                * [3.2.2.5.6 Transport options](#32256-transport-options)
+                * [3.2.2.5.7 Translib linking](#32257-Translib-linking)
+                * [3.2.2.5.8 Encodings](#32258-encodings)
+                * [3.2.2.5.9 Payload Validations](#32259-payload-validations)
+                * [3.2.2.5.10 Concurrency](#322510-concurrency)
+                * [3.2.2.5.11 API Versioning](#322511-api-versioning)
+                * [3.2.2.5.12 gNOI RPCs](#322512-gnoi-rpcs)
             * [3.2.2.6 Translib](#3226-Translib)
                 * [3.2.2.6.1 App Interface](#32261-app-interface)
                 * [3.2.2.6.2 Translib Request Handler](#32262-Translib-request-handler)
@@ -1059,10 +1069,10 @@ definition files (both YANG generated and manual) along with link to open Swagge
 4. The Translib client is used to provide alternative models of access such as Openconfig models as opposed to the native Redis schema, as long as the Translib supports these models. Translib offers bidirectional translation between the native Redis model and the desired north bound model, as well as notifications/updates on these model objects to support telemetry and asynchronous updates, alarms and events. Translib should also provide information about what models it supports so that information can be returned in gNMI Capabilities response.
 5. The gNMI server defines the four RPC functions as required by the gNMI Specification: Get, Set, Capabilities and Subscribe.
 6. Since the db, non-db and Translib clients offer the functionality to support these functions, gNMI only has to translate the paths and object payloads into the correct parameters for the client calls and package the results back into the response gNMI objects to return to the gNMI Client, which is a straightforward operation, since no additional processing of the data is expected to be done in the gNMI server itself. When new models are added to Translib, no additional work should be required to support them in gNMI server.
-7. All operations in a Set request are processed in a single transaction that will either succeed or fail as one operation. The db, non-db and Translib clients must support a Bulk operation in order to achieve the transactional behavior. gNMI server then must use this Bulk operation for Set requests.
+7. All operations in a Set request are processed in a single transaction that will either succeed or fail as one operation. The translib client supports a Bulk operation in order to achieve the transactional behavior of multiple set operations. The order in which multiple set operations occures in a single set request is defined in the [gNMI Specification](https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#34-modifying-state). Care must be taking when doing bulk operations that the objects being operated on are created before performing further operations on them. Otherwise an error may be returned.
 8. Subscribe operations: Once, Poll and Stream require that the gRPC connection remain open until the subscription is completed. This means many connections must be supported. Subscribe offers several options, such as only sending object updates (not the whole object) which requires support form the db clients. Subscribe also allows for periodic sampling defined by the client. This must be handled in the gNMI agent itself. This requires a timer for each subscribe connection of this type in order to periodically poll the db client and return the result in a Subscribe Response. These timers should be destroyed when the subscription gRPC connection is closed.
 
-###### 3.2.2.5.1 Files changed/added:
+###### 3.2.2.5.1 Files changed and added:
 
     |-- gnmi_server
     |   |-- client_subscribe.go
@@ -1085,6 +1095,129 @@ go run gnmi_get.go  -xpath /openconfig-acl:acl/acl-sets/acl-set[name=MyACL4][typ
 go run gnmi_set.go -replace  /openconfig-acl:acl/acl-sets/acl-set[name=MyACL4][type=ACL_IPV4]/acl-entries/acl-entry=2/actions/config:@openconfig.JSON -target_addr 10.130.84.34:8081 -alsologtostderr -insecure true -pretty
 
 go run gnmi_capabilities.go -target_addr 10.130.84.34:8081 -alsologtostderr -insecure true -pretty
+
+###### 3.2.2.5.3 Authentication
+
+gNMI Server supports four modes of authentication:
+
+    - Basic Authentication - Requires passing of username and password in the gRPC metadata via the username and password keys.
+    - JSON Web Tokens (JWT) - Requires initial authentication via either basic or certificate authentication using the gNOI Authenticate RPC, afterwhich a token is recieved that can be used with future requests to avoid further authentication. The JWT token is sent in the metadata of the gRPC requests with the access_token key.
+    - Certificate - A valid client certificate is used with the username embedded in the certificate CN field. This allows the requests to be authenticaed against the CA certificate and the username can be used for authorization.
+
+By default Basic and JWT authentication modes are enabled. Details are in [SONiC RBAC HLD](https://github.com/project-arlo/SONiC/blob/master/doc/aaa/SONiC%20RBAC%20HLD.md).
+
+###### 3.2.2.5.4 Error Responses
+
+gNMI Server sends back gRPC error codes along with error messages in the gRPC response messages.
+
+A full list of possible response codes can be found [here](https://godoc.org/google.golang.org/grpc/codes)
+
+###### 3.2.2.5.5 DB Schema
+
+gNMI Server already has a ConfigDB table "TELEMETRY|gnmi" but some keys have been added or modified.
+
+```
+key      = TELEMETRY|gnmi   ; gNMI Server configurations
+port        = 1*5DIGIT              ; server port - defaults to 8080
+client_auth = "none" / "password" / "jwt" / "cert" 
+                                    ; Client authentication mode.
+                                    ; none: No authentication, all clients
+                                    ;       are allowed. Should be used only
+                                    ;       for debugging.
+                                    ; password: HTTP Basic authentication.
+                                    ; jwt : HTTP Bearer Token authentication with
+                                    ;       JSON Web Token format.
+                                    ; cert: Certificate based authentication.
+                                    ;       Requires ca_crt configuration.
+                                    ; Any combination of "password", "jwt" and "cert" modes can be
+                                    ; enabled by specifying a comma separated values.
+                                    ; Eg: "password,jwt" enables both password and jwt modes.
+jwt_refresh = 1-jwt_valid           
+                                    ; The number of seconds before the JWT    ; token expires that you can refresh the  ; token. - defaults to 900 seconds.
+jwt_valid = 1-2^64        
+                                    ; Number of seconds the JWT tokens are    ; valid. - defaults to 3600          
+
+```
+
+###### 3.2.2.5.6 Transport options
+
+gNMI server supports only TCP transport with TLS enabled and listens on default port 8080.
+Server port can be changed through an entry in ConfigDB TELEMETRY table.
+
+By default a temporary self signed certificate is used as TLS server certificate.
+It can be overridden by specifiying a valid TLS private key and certificate file paths through the TELEMETRY table.
+
+###### 3.2.2.5.7 Translib linking
+
+gNMI server will statically link with Translib. For each gNMI request, the server
+invokes Translib API which then invokes appropriate App module to process the request.
+Below is the mapping of gRPC operations to Translib APIs:
+
+ gRPC Method | Translib API      | Request data  | Response data
+-------------|-------------------|---------------|---------------
+ GET         | translib.Get      | path          | status, payload
+ SET/UPDATE  | translib.Update   | path, payload | status
+ SET/REPLACE | translib.Replace  | path, payload | status
+ SET/DELETE  | translib.Delete   | path          | status
+ (ANY OC-RPC)| translib.Action   | RPC,payload   | status, payload
+ SUBSCRIBE   | translib.Subscribe| path          | status, payload
+ CAPABILITIES| translib.GetModels|               | models, versions, encodings
+ 
+
+More details about Translib APIs are in section [3.2.2.6](#3_2_2_6-Translib).
+
+
+###### 3.2.2.5.8 Encodings
+
+gNMI Currently only supports JSON_IETF type encoding in the same was as REST server since translib nativly uses this format.
+
+###### 3.2.2.5.9 Payload Validations
+
+gNMI server does not validate request payload. Payload will be validated automatically in lower layers when it gets loaded
+into YGOT bindings.
+
+###### 3.2.2.5.10 Concurrency
+
+gNMI server will accept concurrent requests. Translib provides appropriate locking mechanism - parallel reads and sequential writes.
+
+###### 3.2.2.5.11 API Versioning
+
+gNMI server will allow clients to specify API version through a custom gNMI Extension field BundleVersion with extentsion id 700.
+
+    BundleVersion: 1.0.3
+
+Version text should be in **MAJOR.MINOR.PATCH** format. gNMI server will extract version text from
+the gNMI request protobuf object and pass it to the Translib API as **ClientVersion** argument.
+Section [3.2.2.6.4.2](#322642-version-checks) explains Translib version checking logic.
+
+Version checks are bypassed if BundleVersion header is not present in the request.
+
+For YANG defined APIs, the server's version can be discovered through the standard Capabilities gNMI RPC. The capabilities response will also contain an extension field SupportedBundleVersions with extension id 701.
+
+The gNMI protobuf extension fields are defined as follows in the sonic.proto file in the telemetry repository:
+
+    message BundleVersion {
+      string version = 1;
+    }
+    message SupportedBundleVersions {
+      string bundle_version = 1;
+      string base_version = 2;
+    }
+
+
+
+###### 3.2.2.5.12 gNOI RPCs
+
+Along with gNMI RPCS (GET,SET,SUBSCRIBE,CAPABILITIES), custom RPCs are exposed on the [gNOI](https://github.com/openconfig/gnoi) server on the same port as gNMI server. 
+
+gNOI Allows the gNMI server to add custom RPC operations. gNOI Provides a number of standardized RPCs, however currently on the the system/Time RPC is available from those RPCs.
+
+OpenConfig and Sonic customer RPCs are also available via gNOI via the sonic_gnoi.proto file in the telemetry repository. This file provides the protobuf definition for calling these RPCs as well as the format of their arguments and their responses.
+
+Also, the JWT authentication method uses two custom RPCs called Authenticate and Refresh to manage the JWT tokens. These RPCs are available in the sonic_gnoi_jwt.proto file in the telemetry repository. 
+
+For gNOI client usage examples see [3.2.2.3](#3223-gnmi-client)
+
 
 ##### 3.2.2.6 Translib
 
