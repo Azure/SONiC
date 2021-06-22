@@ -156,7 +156,7 @@
 
 ## Dockers Information  
 
-Following are the dockers that are running in SONiC. 
+Following are the Docker containers that are running as part of SONiC. 
 
 1) telemetry - Runs processes like telemetry & dialout_client_cli
 2) syncd - Runs processes like syncd & dsserve which is used to sync the application data into the ASIC.
