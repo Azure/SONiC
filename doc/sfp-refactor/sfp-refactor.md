@@ -596,6 +596,23 @@ class Sff8024(XcvrCodes):
     
 ```
 
+There are some codes that are specific to a xcvr specification. For these, a class that inherits from Sff8024 will be used to define the codes.
+
+```
+# codes/public/cmis.py
+
+class CmisCodes(Sff8024):
+    MODULE_STATUS = {
+        1: “ModuleLowPwr”,
+        2: “ModulePwrUp”,
+        3: “ModuleReady”,
+        4: “ModulePwrDn”,
+        5: “Fault”
+    }
+    
+    ...
+    
+```
 
 
 ### Vendor Specific Extensions
@@ -606,20 +623,21 @@ Several of the code tables in SFF-8024 include code ranges that are vendor-speci
 ```
 # codes/vendorA/sff8024_model1.py
 
-class VendorAModel1Codes(SFF8024):
-    VENDOR_CONNECTORS = {
+class VendorAModel1Codes(Sff8024):
+    CONNECTORS = {
         ...
     }
     ...
 
 # codes/vendorB/sff8024_model1.py
 
-class VendorBModel1Codes(SFF8024):
-    VENDOR_CONNECTORS = {
+class VendorBModel1Codes(Sff8024):
+    CONNECTORS = {
         ...
     }
 
     ...
+
 ```
 
 
