@@ -369,12 +369,12 @@ XcvrFields represent something of interest in a memory map that can be encoded o
 
 1. RegBitField: a field occupying a bit in the memory map
 2. RegField: a field occupying one or more bytes in the memory map, but is logically meant to be interpreted as one entity, e.g. a 4-byte integer
-3. RegGroupField: a field occupying one or more bytes in the memory map, logically representing 1 or more RegFields that exist contiguously in memory that may be interpreted as distinct entities, e.g. a 4-byte integer followed by a 16-byte string
+3. RegGroupField: a field occupying one or more bytes in the memory map, logically representing 1 or more RegFields or RegGroupFields that exist contiguously in memory that may be interpreted as distinct entities, e.g. a 4-byte integer followed by a 16-byte string
 
 The RegField type has several subtypes to handle the various field types commonly seen in xcvr specs: 
 *   NumberRegField: interpret byte(s) as a number
 *   StringRegField: interpret byte(s) as a string
-*   CodeRegField: interpret byte as a code
+*   CodeRegField: interpret byte(s) as a code
 *   HexRegField: interpret byte(s) as a series of hex pairs
 
 The exact encoding or decoding behaviour will depend on the XcvrField, but it should always be the case that encode()/decode() are inverses of each other, i.e. val == decode(encode(val)), where val is some high level data appropriate for the XcvrField. The exception to this would be if a field is read-only or any other situation where adding support for writing would not make sense (such as for a RegGroupField), in which case encode() would not be implemented. 
@@ -449,9 +449,9 @@ Attributes:
 class RegGroupField(XcvrField):
 """
 Attributes:
-    fields: 1 or more Regfield-derived fields
+    fields: 1 or more Regfield-derived fields or RegGroupFields
     offset: offset of first member field
-    size: sums of size of all member fields
+    size: minimum size that encapsulates all member fields starting from the offset
 """
     ...
 
