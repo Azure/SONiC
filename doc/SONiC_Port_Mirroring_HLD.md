@@ -27,13 +27,10 @@
           * [3.3.2 Other Process](#332-other-process)
       * [3.4 SAI](#35-sai)
       * [3.5 CLI](#36-cli)
-          * [3.5.1 Data Models](#351-data-models)
-          * [3.5.2 Configuration Commands](#352-configuration-commands)
-          * [3.5.3 Show Commands](#353-show-commands)
-          * [3.5.4 Clear Commands](#354-clear-commands)
-          * [3.5.5 Debug Commands](#355-debug-commands)
-          * [3.5.6 Rest API Support](#356-rest-api-support)
-          * [3.5.7 GNMI Support](#357-gnmi-support)
+          * [3.5.1 Configuration Commands](#351-configuration-commands)
+          * [3.5.2 Show Commands](#352-show-commands)
+          * [3.5.3 Clear Commands](#353-clear-commands)
+          * [3.5.4 Debug Commands](#354-debug-commands)
   * [4. Flow Diagrams](#4-flow-diagrams)
   * [5. Error Handling](#5-Error-Handling)
   * [6. Serviceability and Debug](#6-serviceability-and-debug)
@@ -227,83 +224,7 @@ https://github.com/opencomputeproject/SAI/blob/master/inc/saimirror.h
 ```
 
 ## 3.5 CLI
-### 3.5.1 Data Models
-SONiC Yang model  and OpenConfig extension models will be introduced for this feature.
-
-## openconfig-mirror-ext
-```diff
-  +--rw mirror
-     +--rw config
-     +--ro state
-     +--rw sessions
-        +--rw session* [name]
-           +--rw name      -> ../config/name
-           +--rw config
-           |  +--rw name?        string
-           |  +--rw dst-port?    oc-if:base-interface-ref
-           |  +--rw src-port?    oc-if:base-interface-ref
-           |  +--rw direction?   mirror-session-direction
-           |  +--rw src-ip?      oc-inet:ip-address
-           |  +--rw dst-ip?      oc-inet:ip-address
-           |  +--rw dscp?        uint8
-           |  +--rw gre-type?    string
-           |  +--rw ttl?         uint8
-           |  +--rw queue?       uint8
-           +--ro state
-              +--ro name?           string
-              +--ro dst-port?       oc-if:base-interface-ref
-              +--ro src-port?       oc-if:base-interface-ref
-              +--ro direction?      mirror-session-direction
-              +--ro src-ip?         oc-inet:ip-address
-              +--ro dst-ip?         oc-inet:ip-address
-              +--ro dscp?           uint8
-              +--ro gre-type?       string
-              +--ro ttl?            uint8
-              +--ro queue?          uint8
-              +--ro status?         string
-              +--ro monitor-port?   oc-if:base-interface-ref
-              +--ro dst-mac?        oc-yang:mac-address
-              +--ro route-prefix?   oc-inet:ip-address
-              +--ro vlan-id?        uint16
-              +--ro next-hop-ip?    oc-inet:ip-address
-
-```
-| Prefix |     Module Name    |
-|:---:|:-----------:|
-| oc-mirror-ext | openconfig-mirror-ext  |
-| oc-ext | openconfig-extensions  |
-| oc-yang | openconfig-yang-types  |
-| oc-inet | openconfig-inet-types  |
-| oc-if | openconfig-interfaces  |
-
-## sonic-mirror-session
-```diff
-  +--rw sonic-mirror-session
-     +--rw MIRROR_SESSION
-     |  +--rw MIRROR_SESSION_LIST* [name]
-     |     +--rw name         string
-     |     +--rw src_ip?      inet:ipv4-address
-     |     +--rw dst_ip?      inet:ipv4-address
-     |     +--rw gre_type?    string
-     |     +--rw dscp?        uint8
-     |     +--rw ttl?         uint8
-     |     +--rw queue?       uint8
-     |     +--rw dst_port?    union
-     |     +--rw src_port?    union
-     |     +--rw direction?   enumeration
-     +--ro MIRROR_SESSION_TABLE
-        +--ro MIRROR_SESSION_TABLE_LIST* [name]
-           +--ro name            string
-           +--ro status?         string
-           +--ro monitor_port?   -> /prt:sonic-port/PORT/PORT_LIST/ifname
-           +--ro dst_mac?        yang:mac-address
-           +--ro route_prefix?   inet:ipv4-address
-           +--ro vlan_id?        -> /svlan:sonic-vlan/VLAN/VLAN_LIST/name
-           +--ro next_hop_ip?    inet:ipv4-address
-
-```
-
-### 3.5.2 Configuration Commands
+### 3.5.1 Configuration Commands
 
 Existing mirror session commands are enhanced to support this feature.
 ```
@@ -320,19 +241,7 @@ Existing mirror session commands are enhanced to support this feature.
     config mirror_session add span <session-name> <destination_ifName> <source_ifName> <rx/tx/both> [queue] --policer <policer>
 ```
 
-KLISH CLI Support.
-
-    # SPAN config
-    # **switch(config)# [no] mirror-session <session-name>** <br>
-    **switch(config-mirror-<session-name>)# [no] destination <dest_ifName> [source <src_ifName> direction <rx/tx/both>]** <br>
-    dest_ifName can be port only
-    src_ifName can be port/port-channel>
-
-    # ERSPAN config
-    **switch(config)# [no] mirror-session <session-name>** <br>
-    **switch(config-mirror-<session-name>)# [no] destination erspan src_ip <src_ip> dst_ip <dst_ip> dscp < dscp > ttl < ttl > [ gre < gre >] [queue <queue>] [source <src_ifName> direction <rx/tx>**] [policer <policer>]<br>
-
-### 3.5.3 Show Commands
+### 3.5.2 Show Commands
 
 The following show command display all the mirror sessions that are configured.
 
@@ -348,53 +257,12 @@ The following show command display all the mirror sessions that are configured.
     sess1   active    Ethernet24  Ethernet32  rx
 
 
-KLISH show mirror-session is same as above.
-
-###  3.5.4 Clear Commands
+###  3.5.3 Clear Commands
 No command variants of config commands take care of clear config.
 
-### 3.5.5 Debug Commands
+### 3.5.4 Debug Commands
 Not applicable
 
-### 3.5.6 REST API Support
-
-- Please check all REST API from link @ https://<switch_ip>/ui link. 
-- This webserver provides user information about all the REST URLS, REST Data. Return codes. 
-- This webserver also provides interactive support to try REST queries.
-
-- Following REST SET and GET APIs will be supported
-
-The following show command display all the mirror sessions that are configured.
-```
-    # Get all mirror sessions
-    # curl -X GET "https://<switch_ip>/restconf/data/sonic-mirror-session:sonic-mirror-session" -H "accept: application/yang-data+json"
-
-    # Create SPAN session
-    # curl -X POST "https://<switch_ip>/restconf/data/sonic-mirror-session:sonic-mirror-session" -H "accept: application/yang-data+json" -H "Content-Type: application/yang-data+json" -d "{ \"sonic-mirror-session:MIRROR_SESSION\": { \"MIRROR_SESSION_LIST\": [ { \"name\": \"sess1\", \"dst_port\": \"Ethernet10\", \"src_port\": \"Ethernet8\", \"direction\": \"rx\" } ] }}"
-
-    # Delete all mirror sessions
-    # curl -X DELETE "https://<switch_ip>/restconf/data/sonic-mirror-session:sonic-mirror-session" -H "accept: application/yang-data+json"
-
-    # Delete specific mirror session
-    # curl -X DELETE "https://<switch_ip>/restconf/data/sonic-mirror-session:sonic-mirror-session/MIRROR_SESSION/MIRROR_SESSION_LIST=mirr3" -H "accept: application/yang-data+json"
-```
-
-### 3.5.7 GNMI Support
-
-- Following GNMI set and get commands will be supported.
-```
-    # Get all mirror sessions
-    # gnmi_get -xpath /sonic-mirror-session:sonic-mirror-session -target_addr 127.0.0.1:8080 -insecure
-
-    # Create SPAN session. mirror.json includes json payload same as rest-api above.
-    # gnmi_set -update /sonic-mirror-session:sonic-mirror-session/:@./mirror.json -target_addr 127.0.0.1:8080 -insecure
-
-    # Delete all mirror sessions
-    # gnmi_set -delete /sonic-mirror-session:sonic-mirror-session -target_addr 127.0.0.1:8080 -insecure
-
-    # Delete specific mirror session
-    # gnmi_set -delete /sonic-mirror-session:sonic-mirror-session/MIRROR_SESSION/MIRROR_SESSION_LIST[name=Mirror1] -target_addr 127.0.0.1:8080 -insecure
-```
 # 4 Flow Diagrams
 
 # 5 Error Handling
@@ -466,3 +334,4 @@ test_mirror_port_span.py::TestMirror::test_PortMirrorPolicerMultiAddRemove PASSE
 test_mirror_port_span.py::TestMirror::test_PortMirrorPolicerWithAcl PASSED                                                                                                                                                             [ 91%]
 test_mirror_port_span.py::TestMirror::test_LAGMirorrSpanAddRemove PASSED                                                                                                                                                               [100%]
 ```
+
