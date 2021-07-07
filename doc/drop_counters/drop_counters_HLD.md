@@ -387,6 +387,9 @@ In order to make this feature platform independent, we rely on SAI query APIs (d
 * BRCM SAI:
     - ACL_ANY, DIP_LINK_LOCAL, SIP_LINK_LOCAL, and L3_EGRESS_LINK_OWN are all based on the same underlying counter in hardware, so enabling any one of these reasons on a drop counter will (implicitly) enable all of them.
 
+* MLNX SAI:
+    - Any individual drop reason can only be added to at most **one** counter.
+
 # 8 Open Questions
 - How common of an operation is configuring a drop counter? Is this something that will usually only be done on startup, or something people will be updating frequently?
 
