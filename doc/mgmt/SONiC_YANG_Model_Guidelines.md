@@ -8,6 +8,7 @@
  |:---:|:-----------:|:------------------:|-----------------------------------|
  | 1.0 | 22 Aug 2019 | Praveen Chaudhary  | Initial version                   |
  | 1.0 | 11 Sep 2019 | Partha Dutta       | Adding additional steps for SONiC YANG  |
+ | 1.1 |  2 Mar 2021 | Mayank Maheshwari  | Adding details of each extension used in SONiC YANG  |
 
 ## References
 | References 		    |     Date/Version    |   		    Link     	 	|
@@ -274,7 +275,7 @@ container ACL_RULE {
 }
 ```
 
-### 11. Mapping tables in Redis are defined using nested 'list'. Use 'sonic-ext:map-list "true";' to indicate that the 'list' is used for mapping table. The outer 'list' is used for multiple instances of mapping. The inner 'list' is used for mapping entries for each outer list instance.
+### 11. Mapping tables in Redis are defined using nested 'list'. Use 'sonic-ext:map-leaf' extension to indicate that the 'list' is used for mapping table. The outer 'list' is used for multiple instances of mapping. The inner 'list' is used for mapping entries for each outer list instance.
 
 Example :
 
@@ -293,7 +294,7 @@ queue  = 1*DIGIT; queue index
 	container TC_TO_QUEUE_MAP {
 		list TC_TO_QUEUE_MAP_LIST {
 			key "name";
-			sonic-ext:map-list "true"; //special annotation for map table
+			sonic-ext:map-leaf "tc_num qindex"; //every key:value pair is mapped to list keys, e.g. "1":"7" ==> tc_num=1, qindex=7
 
 			leaf name {
 				type string;
@@ -622,7 +623,180 @@ module sonic-port {
 ```
 
 
+## SONiC YANG Extensions
 
+#### 1. db-name: When SONiC YANG to be used as Northbound YANG, application may need to get data from DBs other than CONFIG_DB such as STATE_DB or APPL_DB. Use "db-name" extension to specify the DB where this table is defined.
+
+#### 2. key-delim: When "db-name" extension is used to specify DB type other than CONFIG_DB, use "key-delim" extension to specify the key delimiter used for this DB type.
+
+Example:
+```
+container RADIUS_SERVER_STATS {
+    sonic-ext:db-name "COUNTERS_DB";
+    sonic-ext:key-delim ":";
+    config false;
+    list RADIUS_SERVER_STATS_LIST {
+    ....
+    ....
+    }
+}
+```
+
+#### 3. key-pattern: Use this extension when table key follows special pattern.
+
+Example:
+##### ABNF:
+```
+    "QUEUE": {
+        "Ethernet0,Ethernet4,Ethernet8,Ethernet12,Ethernet16,Ethernet120,Ethernet124|0": {
+            "scheduler": "[SCHEDULER|scheduler.1]"
+        },
+        "Ethernet0,Ethernet4,Ethernet8,Ethernet12,Ethernet16,Ethernet100,Ethernet104,Ethernet124|3-4": {
+            "wred_profile": "[WRED_PROFILE|AZURE_LOSSLESS]",
+            "scheduler": "[SCHEDULER|scheduler.0]"
+        }
+    }
+```
+##### YANG:
+```
+container QUEUE {
+    list QUEUE_LIST {
+        key "ifname qindex";
+        sonic-ext:key-pattern "QUEUE|({ifname},)*|{qindex}";
+        
+        leaf ifname {
+            type leafref {
+                path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:ifname";
+            }
+        }
+        leaf qindex {
+            type string;
+        }
+        ....
+    }
+}
+```
+
+#### 4. map-leaf: Mapping tables in Redis are defined using nested 'list'. The outer 'list' is used for multiple instances of mapping. The inner 'list' is used for mapping entries for each outer list instance. Use 'map-leaf' extension to indicate nested 'list' and specify mapping between two fields which are also key fields of inner list.
+
+Example:
+##### ABNF:
+```
+    "DSCP_TO_TC_MAP": {
+        "AZURE_1": {
+            "1": "1",
+            "0": "0",
+            "3": "3",
+            "4": "4"
+        },
+        "AZURE_2": {
+            "50": "1",
+            "51": "0",
+            "52": "3",
+            "53": "4"
+        }
+    }
+```
+##### YANG:
+```
+        container DSCP_TO_TC_MAP {
+            list DSCP_TO_TC_MAP_LIST {
+                key "name";
+                sonic-ext:map-leaf "dscp tc_num"; //every key:value pair is mapped to list keys, e.g. "1":"7" ==> tc_num=1, dscp=7
+
+                leaf name {
+                    type string;
+                }
+
+                list DSCP_TO_TC_MAP { //this is list inside list for storing mapping between two fields
+                    key "dscp tc_num";
+
+                    leaf tc_num {
+                        type string {
+                            pattern "[0-9]?";
+                        }
+                    }
+                    leaf dscp {
+                        type string {
+                            pattern "[1-9][0-9]?|[0-9]?";
+                        }
+                    }
+                }
+            }
+        }
+```
+
+#### 5. custom-validation: Use this extension when customized code is required for validation. Function name has to be given with this extension which will be called to perform custom validation.
+Example:
+##### YANG:
+```
+        container ACL_RULE {
+            list ACL_RULE_LIST {
+                key "aclname rulename";
+                leaf aclname {
+                    type leafref {
+                        path "/sonic-acl/ACL_TABLE/ACL_TABLE_LIST/aclname";
+                    }
+                }
+                leaf rulename {
+                    type string;
+                }
+                ....
+                leaf IP_TYPE {
+                    sonic-ext:custom-validation ValidateAclRuleIPAddress;
+                    type enumeration {
+                        enum ANY;
+                        enum IP;
+                        enum IPV4;
+                        enum IPV4ANY;
+                        enum NON_IPV4;
+                        enum IPV6ANY;
+                        enum NON_IPV6;
+                    }
+                }
+            }
+        }
+```
+
+#### 6. dependent-on: Use this extension to define dependency on other table. Usually dependency can be specified using 'leafref' statement. This extension should to be used for cases where it is not possible to specify dependency using 'leafref'. In below example, edge_port and link_type nodes has 'when' condition which requires to check STP mode. This has dependency on STP table but not possible to specify using 'leafref'. 
+Example:
+##### YANG:
+```
+        container STP {
+            list STP_LIST {
+                key "id";
+                leaf id {
+                    type enumeration {
+                        enum GLOBAL;
+                    }
+                }
+                ....
+            }
+        }
+        
+        container STP_PORT {
+            list STP_PORT_LIST {
+                key "ifname";
+                sonic-ext:dependent-on "STP_LIST";
+                leaf ifname {
+                    type string;
+                }
+                ....
+                leaf edge_port {
+                    when "../../../STP/STP_LIST[id='GLOBAL']/mode = 'rpvst'";
+                    type boolean;
+                }
+                leaf link_type {
+                    when "../../../STP/STP_LIST[keyleaf='GLOBAL']/mode = 'rpvst'";
+                    type enumeration {
+                        enum auto;
+                        enum shared;
+                        enum point-to-point;
+                    }
+                }
+            }
+        }
+```
 
 
 
@@ -865,4 +1039,3 @@ module sonic-acl {
 }
 
 ```
-
