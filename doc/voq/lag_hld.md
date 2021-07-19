@@ -1,6 +1,6 @@
 # LAG on Distributed VOQ System
 # High Level Design Document
-### Rev 1.0
+### Rev 1.1
 
 # Table of Contents
   * [List of Tables](#list-of-tables)
@@ -42,6 +42,7 @@
 | Rev |     Date    |       Author                                                                              | Change Description                |
 |:---:|:-----------:|:-----------------------------------------------------------------------------------------:|-----------------------------------|
 | 1.0 |             |     Srikanth Keesara, Vedavinayagam Ganesan, Sureshkannan Duraisamy (Nokia's Sonic Team)  | Initial version                   |
+| 1.1 |             |     Vedavinayagam Ganesan (Nokia's Sonic Team)                                            | Updates for show commands         |
 
 # About this Manual
 This document describes changes needed for the correct operation of LAG in a distributed VOQ system.
@@ -545,15 +546,49 @@ Shown below is the new attribute of SAI_OBJECT_TYPE_LAG object that is used for 
 
 ## 8 Example Show Commands
 
+The system lag information are taken from **SYSTEM_LAG_TABLE** of **CHASSIS_APP_DB** from supervisor card.
+
+The show commands for system lags are under **show chassis** commands group as show below
+
 ```
-admin@sonic:~$ show interfaces portchannel system
-Flags: A - active, I - inactive, Up - up, Dw - Down, N/A - not available,
-       S - selected, D - deselected, * - not synced, L - local switch
-  No.  Switch ID    LAG Name      Protocol   Ports
------  ----------   -----------   ---------- --------------
-    1  0(L}         PortChannel1  SystemLAG  Slot1|Asic0|Ethernet1(S)  Slot1|Asic0|Ethernet2(S)
-    2  6            PortChannel1  SystemLAG  Slot2|Asic0|Ethernet1(S)  Slot2|Asic0|Ethernet2(S)
+admin@Linecard2:~$ show chassis -h
+Usage: show chassis [OPTIONS] COMMAND [ARGS]...
+
+  Chassis commands group
+
+Options:
+  -h, -?, --help  Show this message and exit.
+
+Commands:
+  modules           Show chassis-modules information
+  system-lags       Show VOQ system lags information
+  system-neighbors  Show VOQ system neighbors information
+  system-ports      Show VOQ system ports information
+admin@Linecard2:~$ 
 ```
+### Syntax
+```
+admin@Linecard2:~$ show chassis system-lags -h
+Usage: show chassis system-lags [OPTIONS] [SYSTEMLAGNAME]
+
+  Show VOQ system lags information
+
+Options:
+  -x, --asicname TEXT   Asic name
+  --verbose             Enable verbose output
+  -?, -h, --help        Show this message and exit.
+admin@Linecard2:~$ 
+```
+### Sample output
+```
+admin@Linecard2:~$ show chassis system-lags
+             System Lag Name    Lag Id    Switch Id                                     Member System Ports
+----------------------------  --------  -----------  ------------------------------------------------------
+Linecard2|Asic0|PortChannel1         2            6  Linecard2|Asic0|Ethernet10, Linecard2|Asic0|Ethernet11
+Linecard4|Asic0|PortChannel1         1           18   Linecard4|Asic0|Ethernet7, Linecard4|Asic0|Ethernet20
+admin@Linecard2:~$ 
+```
+
 ## 9 Test Considerations
 
 ### test_virtual_chassis.py
