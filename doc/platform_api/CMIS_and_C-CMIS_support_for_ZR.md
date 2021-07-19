@@ -7,6 +7,333 @@ CMIS is widely used on modules based on a Two-Wire-Interface (TWI), including QS
 
 The scope of this work is to develop APIs for both CMIS and C-CMIS to support 400G ZR modules on SONiC.
 
+### State_DB and show transceiver CLI definitions:
+
+#### State_DB Schema ####
+
+New Transceiver info table and transceiver DOM sensor table adapted to 400G-ZR modules.
+
+##### Transceiver info Table #####
+
+    ; Defines Transceiver information for a port
+    key                          = TRANSCEIVER_INFO|ifname          ; information for SFP on port
+    ; field                      = value    
+    type                         = 1*255VCHAR                       ; type of sfp
+    module_media_type            = 1*255VCHAR                       ; module media interface ID
+    host_electrical_interface    = 1*255VCHAR                       ; host electrical interface ID
+    media_interface_code         = 1*255VCHAR                       ; media interface code
+    host_lane_count              = 1*255VCHAR                       ; host lane count
+    media_lane_count             = 1*255VCHAR                       ; media lane count
+    host_lane_assigment_option   = 1*255VCHAR                       ; permissible first host lane number for application
+    media_lane_assigment_option  = 1*255VCHAR                       ; permissible first media lane number for application
+    active_apsel_hostlane1       = 1*255VCHAR                       ; active application selected code assigned to host lane 1
+    active_apsel_hostlane2       = 1*255VCHAR                       ; active application selected code assigned to host lane 2
+    active_apsel_hostlane3       = 1*255VCHAR                       ; active application selected code assigned to host lane 3
+    active_apsel_hostlane4       = 1*255VCHAR                       ; active application selected code assigned to host lane 4
+    active_apsel_hostlane5       = 1*255VCHAR                       ; active application selected code assigned to host lane 5
+    active_apsel_hostlane6       = 1*255VCHAR                       ; active application selected code assigned to host lane 6
+    active_apsel_hostlane7       = 1*255VCHAR                       ; active application selected code assigned to host lane 7
+    active_apsel_hostlane8       = 1*255VCHAR                       ; active application selected code assigned to host lane 8
+    media_interface_technology   = 1*255VCHAR                       ; media interface technology
+    hardwarerev                  = 1*255VCHAR                       ; module hardware revision 
+    serialnum                    = 1*255VCHAR                       ; module serial number 
+    manufacturename              = 1*255VCHAR                       ; module venndor name
+    modelname                    = 1*255VCHAR                       ; module model name
+    vendor_oui                   = 1*255VCHAR                       ; vendor organizationally unique identifier
+    vendor_date                  = 1*255VCHAR                       ; module manufacture date
+    Connector                    = 1*255VCHAR                       ; connector type
+    encoding                     = 1*255VCHAR                       ; serial encoding mechanism
+    ext_identifier               = 1*255VCHAR                       ; additional infomation about the sfp
+    ext_rateselect_compliance    = 1*255VCHAR                       ; additional rate select compliance information
+    cable_type                   = 1*255VCHAR                       ; cable type
+    cable_length                 = 1*255VCHAR                       ; cable length that supported
+    specification_compliance     = 1*255VCHAR                       ; electronic or optical interfaces that supported
+    nominal_bit_rate             = 1*255VCHAR                       ; nominal bit rate per channel
+    firmware_major_rev           = 1*255VCHAR                       ; firmware major revision
+    firmware_minor_rev           = 1*255VCHAR                       ; firmware minor revision
+
+
+##### Transceiver DOM sensor Table #####
+
+    ; Defines Transceiver DOM sensor information for a port
+    key                          = TRANSCEIVER_DOM_SENSOR|ifname    ; information SFP DOM sensors on port
+    temperature                  = FLOAT                            ; temperature value in Celsius
+    voltage                      = FLOAT                            ; voltage value
+    rx1power                     = FLOAT                            ; rx1 power in dbm
+    rx2power                     = FLOAT                            ; rx2 power in dbm
+    rx3power                     = FLOAT                            ; rx3 power in dbm
+    rx4power                     = FLOAT                            ; rx4 power in dbm
+    tx1bias                      = FLOAT                            ; tx1 bias in mA
+    tx2bias                      = FLOAT                            ; tx2 bias in mA
+    tx3bias                      = FLOAT                            ; tx3 bias in mA
+    tx4bias                      = FLOAT                            ; tx4 bias in mA
+    laser_temperature	         = FLOAT                            ; laser temperature value in Celsius
+    prefec_ber                   = FLOAT                            ; prefec ber
+    postfec_ber                  = FLOAT                            ; postfec ber
+    cd_shortlink                 = FLOAT                            ; chromatic dispersion, high granularity, short link in ps/nm
+    cd_longlink                  = FLOAT                            ; chromatic dispersion, low granularity, long link in ps/nm
+    dgd                          = FLOAT                            ; differential group delay in ps
+    sopmd                        = FLOAT                            ; second order polarization mode dispersion in ps^2
+    pdl                          = FLOAT                            ; polarization dependent loss in db
+    osnr                         = FLOAT                            ; optical signal to noise ratio in db
+    esnr                         = FLOAT                            ; electrical signal to noise ratio in db
+    cfo                          = FLOAT                            ; carrier frequency offset in MHz
+    soproc                       = FLOAT                            ; state of polarization rate of change in krad/s
+    laser_config_freq            = FLOAT                            ; laser configured frequency in MHz
+    laser_curr_freq              = FLOAT                            ; laser current frequency in MHz
+    tx_config_power              = FLOAT                            ; configured tx output power in dbm
+    tx_curr_power                = FLOAT                            ; tx current output power in dbm
+    rx_tot_power                 = FLOAT                            ; rx total power in  dbm
+    rx_sig_power                 = FLOAT                            ; rx signal power in dbm
+    media_output_loopback        = FLOAT                            ; media side output loopback enable
+    media_input_loopback         = FLOAT                            ; media side input loopback enable
+    host_output_loopback_lane1   = FLOAT                            ; host side output loopback enable lane1
+    host_output_loopback_lane2   = FLOAT                            ; host side output loopback enable lane2
+    host_output_loopback_lane3   = FLOAT                            ; host side output loopback enable lane3
+    host_output_loopback_lane4   = FLOAT                            ; host side output loopback enable lane4
+    host_output_loopback_lane5   = FLOAT                            ; host side output loopback enable lane5
+    host_output_loopback_lane6   = FLOAT                            ; host side output loopback enable lane6
+    host_output_loopback_lane7   = FLOAT                            ; host side output loopback enable lane7
+    host_output_loopback_lane8   = FLOAT                            ; host side output loopback enable lane8
+    host_intput_loopback_lane1   = FLOAT                            ; host side intput loopback enable lane1
+    host_intput_loopback_lane2   = FLOAT                            ; host side intput loopback enable lane2
+    host_intput_loopback_lane3   = FLOAT                            ; host side intput loopback enable lane3
+    host_intput_loopback_lane4   = FLOAT                            ; host side intput loopback enable lane4
+    host_intput_loopback_lane5   = FLOAT                            ; host side intput loopback enable lane5
+    host_intput_loopback_lane6   = FLOAT                            ; host side intput loopback enable lane6
+    host_intput_loopback_lane7   = FLOAT                            ; host side intput loopback enable lane7
+    host_intput_loopback_lane8   = FLOAT                            ; host side intput loopback enable lane8
+
+##### Transceiver Status Table #####
+
+    ; Defines Transceiver Status info for a port
+    key                          = TRANSCEIVER_STATUS|ifname        ; Error information for SFP on port
+    ; field                      = value    
+    status                       = 1*255VCHAR                       ; code of the SFP status (plug in, plug out)
+    error                        = 1*255VCHAR                       ; SFP error (N/A or a string consisting of error descriptions joined by "|", like "error1 | error2" )
+    module_state                 = 1*255VCHAR                       ; current module state (ModuleLowPwr, ModulePwrUp, ModuleReady, ModulePwrDn, Fault)
+    module_fault_cause           = 1*255VCHAR                       ; reason of entering the module fault state
+    datapath_firmware_fault      = 1*255VCHAR                       ; datapath (DSP) firmware fault
+    module_firmware_fault        = 1*255VCHAR                       ; module firmware fault
+    module_state_changed         = 1*255VCHAR                       ; module state changed
+    datapath_hostlane1           = 1*255VCHAR                       ; data path state indicator on host lane 1
+    datapath_hostlane2           = 1*255VCHAR                       ; data path state indicator on host lane 2
+    datapath_hostlane3           = 1*255VCHAR                       ; data path state indicator on host lane 3
+    datapath_hostlane4           = 1*255VCHAR                       ; data path state indicator on host lane 4
+    datapath_hostlane5           = 1*255VCHAR                       ; data path state indicator on host lane 5
+    datapath_hostlane6           = 1*255VCHAR                       ; data path state indicator on host lane 6
+    datapath_hostlane7           = 1*255VCHAR                       ; data path state indicator on host lane 7
+    datapath_hostlane8           = 1*255VCHAR                       ; data path state indicator on host lane 8
+    txoutput_status              = 1*255VCHAR                       ; tx output status
+    rxoutput_status              = 1*255VCHAR                       ; rx output status
+    txfault                      = 1*255VCHAR                       ; tx fault flag
+    txlos                        = 1*255VCHAR                       ; tx loss of signal flag
+    txcdrlol                     = 1*255VCHAR                       ; tx clock and data recovery loss of lock
+    rxlos                        = 1*255VCHAR                       ; rx loss of signal flag
+    rxcdrlol                     = 1*255VCHAR                       ; rx clock and data recovery loss of lock
+    config_state_hostlane1       = 1*255VCHAR                       ; configuration status for the data path of host line 1
+    config_state_hostlane2       = 1*255VCHAR                       ; configuration status for the data path of host line 2
+    config_state_hostlane3       = 1*255VCHAR                       ; configuration status for the data path of host line 3
+    config_state_hostlane4       = 1*255VCHAR                       ; configuration status for the data path of host line 4
+    config_state_hostlane5       = 1*255VCHAR                       ; configuration status for the data path of host line 5
+    config_state_hostlane6       = 1*255VCHAR                       ; configuration status for the data path of host line 6
+    config_state_hostlane7       = 1*255VCHAR                       ; configuration status for the data path of host line 7
+    config_state_hostlane8       = 1*255VCHAR                       ; configuration status for the data path of host line 8
+    dpinit_pending_hostlane1     = 1*255VCHAR                       ; data path configuration updated on host lane 1 
+    dpinit_pending_hostlane2     = 1*255VCHAR                       ; data path configuration updated on host lane 2
+    dpinit_pending_hostlane3     = 1*255VCHAR                       ; data path configuration updated on host lane 3
+    dpinit_pending_hostlane4     = 1*255VCHAR                       ; data path configuration updated on host lane 4
+    dpinit_pending_hostlane5     = 1*255VCHAR                       ; data path configuration updated on host lane 5
+    dpinit_pending_hostlane6     = 1*255VCHAR                       ; data path configuration updated on host lane 6
+    dpinit_pending_hostlane7     = 1*255VCHAR                       ; data path configuration updated on host lane 7
+    dpinit_pending_hostlane8     = 1*255VCHAR                       ; data path configuration updated on host lane 8
+    tuning_in_progress           = 1*255VCHAR                       ; tuning in progress status
+    wavelength_unlock_status     = 1*255VCHAR                       ; laser unlocked status
+    target_output_power_oor      = 1*255VCHAR                       ; target output power out of range flag
+    fine_tuning_oor              = 1*255VCHAR                       ; fine tuning  out of range flag
+    tuning_not_accepted          = 1*255VCHAR                       ; tuning not accepted flag
+    invalid_channel_num          = 1*255VCHAR                       ; invalid channel number flag
+    tuning_complete              = 1*255VCHAR                       ; tuning complete flag
+    temphighalarm                = 1*255VCHAR                       ; temperature high alarm threshold 
+    temphighwarning              = 1*255VCHAR                       ; temperature high warning threshold
+    templowalarm                 = 1*255VCHAR                       ; temperature low alarm threshold
+    templowwarning               = 1*255VCHAR                       ; temperature low warning threshold
+    vcchighalarm                 = 1*255VCHAR                       ; vcc high alarm threshold
+    vcchighwarning               = 1*255VCHAR                       ; vcc high warning threshold
+    vcclowalarm                  = 1*255VCHAR                       ; vcc low alarm threshold
+    vcclowwarning                = 1*255VCHAR                       ; vcc low warning threshold
+    txpowerhighalarm             = 1*255VCHAR                       ; tx power high alarm threshold
+    txpowerlowalarm              = 1*255VCHAR                       ; tx power low alarm threshold
+    txpowerhighwarning           = 1*255VCHAR                       ; tx power high warning threshold
+    txpowerlowwarning            = 1*255VCHAR                       ; tx power low alarm threshold
+    rxpowerhighalarm             = 1*255VCHAR                       ; rx power high alarm threshold
+    rxpowerlowalarm              = 1*255VCHAR                       ; rx power low alarm threshold
+    rxpowerhighwarning           = 1*255VCHAR                       ; rx power high warning threshold
+    rxpowerlowwarning            = 1*255VCHAR                       ; rx power low warning threshold
+    txbiashighalarm              = 1*255VCHAR                       ; tx bias high alarm threshold
+    txbiaslowalarm               = 1*255VCHAR                       ; tx bias low alarm threshold
+    txbiashighwarning            = 1*255VCHAR                       ; tx bias high warning threshold
+    txbiaslowwarning             = 1*255VCHAR                       ; tx bias low warning threshold
+    lasertemphighalarm           = 1*255VCHAR                       ; laser temperature high alarm threshold
+    lasertemplowalarm            = 1*255VCHAR                       ; laser temperature low alarm threshold
+    lasertemphighwarning         = 1*255VCHAR                       ; laser temperature high warning threshold
+    lasertemplowwarning          = 1*255VCHAR                       ; laser temperature low warning threshold
+    
+#### Show interfaces transceiver CLI
+Displays diagnostic monitoring information of the transceivers
+
+**show interfaces transceiver**
+
+This command displays information for all the interfaces for the transceiver requested or a specific interface if the optional "interface_name" is specified.
+
+- Usage:
+  ```
+  show interfaces transceiver (info | eeprom [-d|--dom] | presence | status) [<interface_name>]
+  ```
+- Example (Decode and display general information of the transceiver connected to Ethernet0):
+  ```
+  admin@sonic:~$ show interfaces transceiver info Ethernet0
+  Ethernet0:
+  Module Type :  QSFP-DD Double Density 8X Pluggable Transceiver (INF-8628)
+  Media Type : Single Model Fiber (SMF)
+  Host Electrical Interface : 400GAUI-8 C2M (Annex 120E), data rate 425.00, lane count 8, lane signal baudrate 26.5625, modulation PAM4, bit per symbol 2
+  Media Interface Code : TBD
+  Host Lane Count : 8
+  Media Lane Count : 1
+  Host Lane Assignment Options : 1
+  Media Lane Assignment Options : 1
+  Active App Selection Host Lane 1 : 1
+  Active App Selection Host Lane 2 : 1
+  Active App Selection Host Lane 3 : 1
+  Active App Selection Host Lane 4 : 1
+  Active App Selection Host Lane 5 : 1
+  Active App Selection Host Lane 6 : 1
+  Active App Selection Host Lane 7 : 1
+  Active App Selection Host Lane 8 : 1
+  Media Interface Technology : C-band tunable laser
+  Vendor Name : XXXXXXX
+  Vendor OUI : XX-XX-XX
+  Hardware Revision : XX.XX
+  Module PN : XXXXXXXXXXX
+  Module SN : XXXXXXXXXXX
+  Module Manufacture Date : XXXXXXXX (MMDDYYYY)
+  Connector Type : LC (Lucent Connector)
+  CMIS Revision : X.X
+  Firmware Version :  XXX.XXX
+  ```
+
+- Example (Decode and display dom information of the transceiver connected to Ethernet0):
+  ```
+  admin@sonic:~$ show interfaces transceiver eeprom --dom Ethernet0
+  Ethernet0:
+  Temperature : 45.00C
+  Vcc : 3.33Volts
+  TX1Bias : 70mA
+  Laser Temperature : 30C
+  Prefec Ber : 1.00E-3
+  Postfec Ber : 0.00E0
+  Cd Shortlink : 2000ps/ns
+  Cd Longlink : 2000ps/ns
+  Dgd : 1.0ps
+  Sopmd : 1ps^2
+  Pdl : 1.0dB
+  Osnr : 28.00dB
+  Esnr : 15.00dB
+  Cfo : 500MHz
+  Soproc : 1krad/s
+  Laser Config Frequency: 193100000MHz
+  Laser Current Frequency : 193100000MHz
+  Tx Config Power : -10.00dBm
+  Tx Current Power : -10.00dBm
+  Rx Total Power : -8.00 dBm
+  Rx Signal Power : -8.00 dBm
+  Media Output Loopback : False
+  Media Input Loopback : False
+  Host Output Loopback : False
+  Host Input Loopback : False
+  ```
+
+- Example (Display presence of SFP transceiver connected to Ethernet0):
+  ```
+  admin@sonic:~$ show interfaces transceiver presence Ethernet0
+  Port         Low-power Mode
+  -----------  ----------------
+  Ethernet0  On
+  ```
+
+- Example (Display error status of SFP transceiver connected to Ethernet0):
+  ```
+  admin@sonic:~$ show interfaces transceiver status Ethernet0
+  Ethernet0:
+  Module State : Ready
+  Module Fault Cause : No Fault detected
+  Datapath Firmware Fault : False
+  Module Firmware Fault : False
+  Module State Changed : False
+  Datapath Host Lane 1: Activated
+  Datapath Host Lane 2: Activated
+  Datapath Host Lane 3: Activated
+  Datapath Host Lane 4: Activated
+  Datapath Host Lane 5: Activated
+  Datapath Host Lane 6: Activated
+  Datapath Host Lane 7: Activated
+  Datapath Host Lane 8: Activated
+  Tx Output Status : Valid
+  Rx Output Status : Valid  
+  Tx Fault : False
+  Tx Los : False
+  Tx Cdr Lol: False
+  Rx Los : False
+  Rx Cdr Lol : False
+  Configuration State Host Lane 1: Config Success
+  Configuration State Host Lane 2: Config Success
+  Configuration State Host Lane 3: Config Success
+  Configuration State Host Lane 4: Config Success
+  Configuration State Host Lane 5: Config Success
+  Configuration State Host Lane 6: Config Success
+  Configuration State Host Lane 7: Config Success
+  Configuration State Host Lane 8: Config Success
+  Datapath Init Pending Host Lane 1: DPInit not pending
+  Datapath Init Pending Host Lane 2: DPInit not pending
+  Datapath Init Pending Host Lane 3: DPInit not pending
+  Datapath Init Pending Host Lane 4: DPInit not pending
+  Datapath Init Pending Host Lane 5: DPInit not pending
+  Datapath Init Pending Host Lane 6: DPInit not pending
+  Datapath Init Pending Host Lane 7: DPInit not pending
+  Datapath Init Pending Host Lane 8: DPInit not pending
+  Tuning In Progress: Tuning Not In Progress
+  Wavelegnth Unlock Status : Wavelength Locked
+  Target Output Power Out Of Range : False
+  Fine Tuning Out Of Range : False
+  Tuning Not Accepted : False
+  Invalid Channel Number : False
+  Tuning Complete : True
+  Temperature High Alarm : False
+  Temperature High Warning : False
+  Temperature Low Alarm : False
+  Temperature Low Warning : False
+  Vcc High Alarm : False
+  Vcc High Warning : False
+  Vcc Low Alarm : False
+  Vcc Low Warning : False
+  Tx Power High Alarm : False
+  Tx Power High Warning : False
+  Tx Power Low Alarm : False
+  Tx Power Low Warning : False
+  Rx Power High Alarm : False
+  Rx Power High Warning : False
+  Rx Power Low Alarm : False
+  Rx Power Low Warning : False  
+  Tx Bias High Alarm : False
+  Tx Bias High Warning : False
+  Tx Bias Low Alarm : False
+  Tx Bias Low Warning : False  
+  Laser Temperature High Alarm : False
+  Laser Temperature High Warning : False
+  Laser Temperature Low Alarm : False
+  Laser Temperature Low Warning : False  
+  ```
+
 The rest of the article will discuss the following items:
 
 - Layered architecture to access registers
