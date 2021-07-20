@@ -119,6 +119,32 @@
   - This repo contains the net-snmpd AgentX SNMP subagent implementation for supporting the MIBs like MIB-II, Physical Table MIB, Interfaces MIB, Sensor Table MIB, ipCidrRouteDest table in IP Forwarding Table MIB, dot1qTpFdbPort in Q-BRIDGE-MIB & LLDP MIB.
   - The python scripts present in this repo are used as part of the "snmp" docker that runs in SONiC.
 
+### sonic-ztp
+- https://github.com/Azure/sonic-ztp
+  - This repo contains the source code of zero touch provisioning software for SONiC switches. The following provides further details on how it is organized.
+  - README.md - Very brief ZTP user guide
+  - debian    - sonic-ztp debian package definitions
+  - doc       - doxygen configuration file
+  - src       - Source code of the ZTP feature
+  - tests     - pytest based unit testcases
+  - src/usr/lib/ztp/
+    - dhcp            - DHCP hooks used by ztp
+    - plugins         - Location for pre-defined plugins
+    - sonic-ztp       - sonic-ztp service launcher file
+    - templates       - Jinja2 templates used to create ZTP configuration profile at run time
+    - ztp-engine.py   - Core ZTP service execution loop
+    - ztp-profile.sh  - Helper script to create/remove ZTP configuration profile
+  - src/usr/lib/python3/dist-packages/ztp/
+    - DecodeSysEeprom.py      - Helper class to read Syseeprom contents
+    - Downloader.py           - Helper class used to download a file from remote host
+    - JsonReader.py           - Helper class used to read contents of a JSON file as a python dictionary and then  write back changes to the JSON file
+    - Logger.py               - Logger API to generate syslogs and console logs at each step of the ZTP service execution
+    - ZTPCfg.py               - Helper class to access contents of the ZTP configuration file */host/ztp/ztp_cfg.json*
+    - ZTPLib.py               - Helper API's used across ZTP libs, ZTP engine and ztp command utility
+    - ZTPObjects.py           - Class which defiles URL, DynamicURL, Identifier and other ojects used in ZTP JSON
+    - ZTPSections.py          - Class to process ZTP JSON and the Configuration Sections which are part of it
+    - defaults.py             - Factory default values of all variables and constants. These values can be overridden by defining them in the ZTP configuration file */host/ztp/ztp_cfg.json*
+  - src/usr/bin/ztp   -  ZTP command line utility to interface with the ZTP service
 
 ## Switch hardware drivers
 
