@@ -16,9 +16,9 @@ New Transceiver info table and transceiver DOM sensor table adapted to 400G-ZR m
 ##### Transceiver info Table #####
 
     ; Defines Transceiver information for a port
-    key                          = TRANSCEIVER_INFO|ifname          ; information for SFP on port
+    key                          = TRANSCEIVER_INFO|ifname          ; information for module on port
     ; field                      = value    
-    type                         = 1*255VCHAR                       ; type of sfp
+    type                         = 1*255VCHAR                       ; type of module
     module_media_type            = 1*255VCHAR                       ; module media interface ID
     host_electrical_interface    = 1*255VCHAR                       ; host electrical interface ID
     media_interface_code         = 1*255VCHAR                       ; media interface code
@@ -56,7 +56,7 @@ New Transceiver info table and transceiver DOM sensor table adapted to 400G-ZR m
 ##### Transceiver DOM sensor Table #####
 
     ; Defines Transceiver DOM sensor information for a port
-    key                          = TRANSCEIVER_DOM_SENSOR|ifname    ; information SFP DOM sensors on port
+    key                          = TRANSCEIVER_DOM_SENSOR|ifname    ; information module DOM sensors on port
     temperature                  = FLOAT                            ; temperature value in Celsius
     voltage                      = FLOAT                            ; voltage value
     rx1power                     = FLOAT                            ; rx1 power in dbm
@@ -107,10 +107,10 @@ New Transceiver info table and transceiver DOM sensor table adapted to 400G-ZR m
 ##### Transceiver Status Table #####
 
     ; Defines Transceiver Status info for a port
-    key                          = TRANSCEIVER_STATUS|ifname        ; Error information for SFP on port
+    key                          = TRANSCEIVER_STATUS|ifname        ; Error information for module on port
     ; field                      = value    
-    status                       = 1*255VCHAR                       ; code of the SFP status (plug in, plug out)
-    error                        = 1*255VCHAR                       ; SFP error (N/A or a string consisting of error descriptions joined by "|", like "error1 | error2" )
+    status                       = 1*255VCHAR                       ; code of the module status (plug in, plug out)
+    error                        = 1*255VCHAR                       ; module error (N/A or a string consisting of error descriptions joined by "|", like "error1 | error2" )
     module_state                 = 1*255VCHAR                       ; current module state (ModuleLowPwr, ModulePwrUp, ModuleReady, ModulePwrDn, Fault)
     module_fault_cause           = 1*255VCHAR                       ; reason of entering the module fault state
     datapath_firmware_fault      = 1*255VCHAR                       ; datapath (DSP) firmware fault
@@ -179,6 +179,50 @@ New Transceiver info table and transceiver DOM sensor table adapted to 400G-ZR m
     lasertemphighwarning         = 1*255VCHAR                       ; laser temperature high warning threshold
     lasertemplowwarning          = 1*255VCHAR                       ; laser temperature low warning threshold
     
+##### Transceiver PM Table #####
+
+    ; Defines Transceiver PM information for a port
+    key                          = TRANSCEIVER_PM|ifname            ; information of PM on port
+    prefec_ber_avg               = FLOAT                            ; prefec ber avg
+    prefec_ber_min               = FLOAT                            ; prefec ber min
+    prefec_ber_max               = FLOAT                            ; prefec ber max
+    uncorr_frames_avg            = FLOAT                            ; uncorrected frames ratio avg
+    uncorr_frames_min            = FLOAT                            ; uncorrected frames ratio min
+    uncorr_frames_max            = FLOAT                            ; uncorrected frames ratio max
+    cd_avg                       = FLOAT                            ; chromatic dispersion avg
+    cd_min                       = FLOAT                            ; chromatic dispersion min
+    cd_max                       = FLOAT                            ; chromatic dispersion max
+    dgd_avg                      = FLOAT                            ; differential group delay avg
+    dgd_min                      = FLOAT                            ; differential group delay min
+    dgd_max                      = FLOAT                            ; differential group delay max
+    sopmd_avg                    = FLOAT                            ; second order polarization mode dispersion avg
+    sopmd_min                    = FLOAT                            ; second order polarization mode dispersion min
+    sopmd_max                    = FLOAT                            ; second order polarization mode dispersion max
+    pdl_avg                      = FLOAT                            ; polarization dependent loss avg
+    pdl_min                      = FLOAT                            ; polarization dependent loss min
+    pdl_max                      = FLOAT                            ; polarization dependent loss max
+    osnr_avg                     = FLOAT                            ; optical signal to noise ratio avg
+    osnr_min                     = FLOAT                            ; optical signal to noise ratio min
+    osnr_max                     = FLOAT                            ; optical signal to noise ratio max
+    esnr_avg                     = FLOAT                            ; electrical signal to noise ratio avg
+    esnr_min                     = FLOAT                            ; electrical signal to noise ratio min
+    esnr_max                     = FLOAT                            ; electrical signal to noise ratio max
+    cfo_avg                      = FLOAT                            ; carrier frequency offset avg
+    cfo_min                      = FLOAT                            ; carrier frequency offset min
+    cfo_max                      = FLOAT                            ; carrier frequency offset max
+    soproc_avg                   = FLOAT                            ; state of polarization rate of change avg
+    soproc_min                   = FLOAT                            ; state of polarization rate of change min
+    soproc_max                   = FLOAT                            ; state of polarization rate of change max
+    tx_power_avg                 = FLOAT                            ; tx output power avg
+    tx_power_min                 = FLOAT                            ; tx output power min
+    tx_power_max                 = FLOAT                            ; tx output power max
+    rx_tot_power_avg             = FLOAT                            ; rx total power avg
+    rx_tot_power_min             = FLOAT                            ; rx total power min
+    rx_tot_power_max             = FLOAT                            ; rx total power max
+    rx_sig_power_avg             = FLOAT                            ; rx signal power avg
+    rx_sig_power_min             = FLOAT                            ; rx signal power min
+    rx_sig_power_max             = FLOAT                            ; rx signal power max 
+    
 #### Show interfaces transceiver CLI
 Displays diagnostic monitoring information of the transceivers
 
@@ -188,7 +232,7 @@ This command displays information for all the interfaces for the transceiver req
 
 - Usage:
   ```
-  show interfaces transceiver (info | eeprom [-d|--dom] | presence | status) [<interface_name>]
+  show interfaces transceiver (info | eeprom [-d|--dom] | presence | status | pm) [<interface_name>]
   ```
 - Example (Decode and display general information of the transceiver connected to Ethernet0):
   ```
@@ -232,19 +276,19 @@ This command displays information for all the interfaces for the transceiver req
   Laser Temperature : 30C
   Prefec Ber : 1.00E-3
   Postfec Ber : 0.00E0
-  Cd Shortlink : 2000ps/ns
-  Cd Longlink : 2000ps/ns
-  Dgd : 1.0ps
-  Sopmd : 1ps^2
-  Pdl : 1.0dB
-  Osnr : 28.00dB
-  Esnr : 15.00dB
-  Cfo : 500MHz
-  Soproc : 1krad/s
-  Laser Config Frequency: 193100000MHz
-  Laser Current Frequency : 193100000MHz
-  Tx Config Power : -10.00dBm
-  Tx Current Power : -10.00dBm
+  Cd Shortlink : 2000 ps/ns
+  Cd Longlink : 2000 ps/ns
+  Dgd : 1.0 ps
+  Sopmd : 1 ps^2
+  Pdl : 1.0 dB
+  Osnr : 28.00 dB
+  Esnr : 15.00 dB
+  Cfo : 500 MHz
+  Soproc : 1 krad/s
+  Laser Config Frequency: 193100000 MHz
+  Laser Current Frequency : 193100000 MHz
+  Tx Config Power : -10.00 dBm
+  Tx Current Power : -10.00 dBm
   Rx Total Power : -8.00 dBm
   Rx Signal Power : -8.00 dBm
   Media Output Loopback : False
@@ -261,7 +305,7 @@ This command displays information for all the interfaces for the transceiver req
   Ethernet0  On
   ```
 
-- Example (Display error status of SFP transceiver connected to Ethernet0):
+- Example (Display status of transceiver connected to Ethernet0):
   ```
   admin@sonic:~$ show interfaces transceiver status Ethernet0
   Ethernet0:
@@ -331,7 +375,51 @@ This command displays information for all the interfaces for the transceiver req
   Laser Temperature High Alarm : False
   Laser Temperature High Warning : False
   Laser Temperature Low Alarm : False
-  Laser Temperature Low Warning : False  
+  Laser Temperature Low Warning : False
+  ```
+- Example (Display pm status of transceiver connected to Ethernet0):
+  ```
+  admin@sonic:~$ show interfaces transceiver pm Ethernet0
+  Ethernet0:
+  prefec_ber_avg : 1.00E-3
+  prefec_ber_min : 1.00E-3
+  prefec_ber_max : 1.00E-3
+  uncorr_frames_avg : 0.00E0
+  uncorr_frames_min : 0.00E0
+  uncorr_frames_max : 0.00E0
+  cd_avg : 0 ps/ns
+  cd_min : 0 ps/ns
+  cd_max : 0 ps/ns
+  dgd_avg : 1.0 ps
+  dgd_min : 1.0 ps
+  dgd_max : 1.0 ps
+  sopmd_avg : 1 ps^2
+  sopmd_min : 1 ps^2
+  sopmd_max : 1 ps^2
+  pdl_avg  : 1.0 dB
+  pdl_min  : 1.0 dB
+  pdl_max  : 1.0 dB
+  osnr_avg : 28.0 dB
+  osnr_min : 28.0 dB
+  osnr_max : 28.0 dB
+  esnr_avg : 15.0 dB
+  esnr_min : 15.0 dB
+  esnr_max : 15.0 dB
+  cfo_avg  : 500 MHz
+  cfo_min  : 500 MHz
+  cfo_max  : 500 MHz
+  soproc_avg : 1 krad/s
+  soproc_min : 1 krad/s
+  soproc_max : 1 krad/s
+  tx_power_avg : -10.00 dBm
+  tx_power_min : -10.00 dBm
+  tx_power_max : -10.00 dBm
+  rx_tot_power_avg : -8.00 dBm
+  rx_tot_power_min : -8.00 dBm
+  rx_tot_power_max : -8.00 dBm
+  rx_sig_power_avg : -8.00 dBm
+  rx_sig_power_min : -8.00 dBm
+  rx_sig_power_max : -8.00 dBm
   ```
 
 The rest of the article will discuss the following items:
