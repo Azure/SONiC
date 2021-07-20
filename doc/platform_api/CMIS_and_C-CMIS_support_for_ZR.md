@@ -421,7 +421,51 @@ This command displays information for all the interfaces for the transceiver req
   rx_sig_power_min : -8.00 dBm
   rx_sig_power_max : -8.00 dBm
   ```
+  
+#### Config_DB Schema ####
+##### Port Table #####
+Stores information for physical switch ports managed by the switch chip. Ports to the CPU (ie: management port) and logical ports (loopback) are not declared in the PORT_TABLE. See INTF_TABLE.
 
+    ;Defines layer 2 ports
+    ;In SONiC, Data is loaded from configuration file by portsyncd
+    key                 = PORT_TABLE:ifname     ; ifname must be unique across PORT,INTF,VLAN,LAG TABLES
+    admin_status        = "down" / "up"         ; admin status
+    oper_status         = "down" / "up"         ; oper status
+    lanes               = list of lanes         ; (need format spec???)
+    mac                 = 12HEXDIG              ;
+    alias               = 1*64VCHAR             ; alias name of the port used by LLDP and SNMP, must be unique
+    description         = 1*64VCHAR             ; port description
+    speed               = 1*6DIGIT              ; port line speed in Mbps
+    mtu                 = 1*4DIGIT              ; port MTU
+    fec                 = 1*64VCHAR             ; port fec mode
+    lpmode              = "enable" / "disable"  ; port low power mode
+    configured_freq     = 1*9DIGIT              ; configured frequency
+    configured_TX_power = FLOAT                 ; configured TX output power 
+    
+    
+#### configure interfaces transceiver CLI
+configure privisioning settings of the transceivers
+
+- Usage:
+    ```
+    configure interfaces transceiver [<interface_name>] (lpmode | configured_frequency | configured_tx_power) 
+    ```
+
+- Example (bring module up from low power mode, or bring down module to low power mode):
+    ```
+    admin@sonic:~$ configure interfaces transceiver Ethernet0 lpmode disable
+    ```
+
+- Example (configure the privisioning frequency):
+    ```
+    admin@sonic:~$ configure interfaces transceiver Ethernet0 configured_frequency 193100000
+    ```
+
+- Example (configure the privisioning TX power):
+    ```
+    admin@sonic:~$ configure interfaces transceiver Ethernet0 configured_tx_power -10.00
+    ```
+    
 The rest of the article will discuss the following items:
 
 - Layered architecture to access registers
