@@ -441,6 +441,7 @@ Stores information for physical switch ports managed by the switch chip. Ports t
     lpmode              = "enable" / "disable"  ; port low power mode
     configured_freq     = 1*9DIGIT              ; configured frequency
     configured_TX_power = FLOAT                 ; configured TX output power 
+    loopback            = "media output" / "media input" / "host output" / "host input" / "none" ; loopback mode
     
     
 #### configure interfaces transceiver CLI
@@ -448,7 +449,7 @@ configure privisioning settings of the transceivers
 
 - Usage:
     ```
-    configure interfaces transceiver [<interface_name>] (lpmode | configured_frequency | configured_tx_power) 
+    configure interfaces transceiver [<interface_name>] (lpmode | configured_frequency | configured_tx_power | loopback) 
     ```
 
 - Example (bring module up from low power mode, or bring down module to low power mode):
@@ -465,7 +466,11 @@ configure privisioning settings of the transceivers
     ```
     admin@sonic:~$ configure interfaces transceiver Ethernet0 configured_tx_power -10.00
     ```
-    
+
+- Example (configure the loopback mode):
+    ```
+    admin@sonic:~$ configure interfaces transceiver Ethernet0 loopback none
+    ```    
 The rest of the article will discuss the following items:
 
 - Layered architecture to access registers
