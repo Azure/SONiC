@@ -1,7 +1,7 @@
 ## CMIS and C-CMIS support for ZR on SONiC
 
 ### Overview
-Common Management Interface Specification (CMIS) is defined for pluggables or on-board modules to communicate with the registers [CMIS v4.0](http://www.qsfp-dd.com/wp-content/uploads/2019/05/QSFP-DD-CMIS-rev4p0.pdf). With a clear difinition of these registers, modules can set the configurations or get the status, to achieve the basic level of monitor and control. 
+Common Management Interface Specification (CMIS) is defined for pluggables or on-board modules to communicate with the registers [CMIS v5.0](http://www.qsfp-dd.com/wp-content/uploads/2021/05/CMIS5p0.pdf). With a clear difinition of these registers, modules can set the configurations or get the status, to achieve the basic level of monitor and control. 
 
 CMIS is widely used on modules based on a Two-Wire-Interface (TWI), including QSFP-DD, OSFP, COBO and QSFP modules. However, new requirements emerge with the introduction of coherent optical modules, such as 400G ZR. 400G ZR is the first type of modules to require definitions on coherent optical specifications, a field CMIS does not touch on. The development of C(coherent)-CMIS aims to solve this issue [C-CMIS v1.1](https://www.oiforum.com/wp-content/uploads/OIF-C-CMIS-01.1.pdf). It is based on CMIS but incroporates more definitions on registers in the extended space, regarding the emerging demands on coherent optics specifications.
 
@@ -507,7 +507,7 @@ The host addressable memory starts with a lower memory of 128 bytes that occupy 
 Then it starts from Page 0. Each page has 128 bytes and the first byte of each page starts with an offset of 128.
 Therefore, the address of a byte with *page* and *offset* is *page* * 128 + *offset*.
 
--  Module general information pages (Page 0h - 1Fh, CMIS). See Figure 8-1 and Figure 8-2 in [CMIS](http://www.qsfp-dd.com/wp-content/uploads/2019/05/QSFP-DD-CMIS-rev4p0.pdf)
+-  Module general information pages (Page 0h - 1Fh, CMIS). See Figure 8-1 and Figure 8-2 in [CMIS](http://www.qsfp-dd.com/wp-content/uploads/2021/05/CMIS5p0.pdf)
 
 Important pages containing module general information:
 
@@ -534,7 +534,7 @@ SFF8024_IDENTIFIER = {
 ```
 -  Versatile Diagnostics Monitor (VDM) pages (Page 20h - 2Fh, CMIS and C-CMIS)
 
-VDM Pages. See Table 8-95 in [CMIS](http://www.qsfp-dd.com/wp-content/uploads/2019/05/QSFP-DD-CMIS-rev4p0.pdf)
+VDM Pages. See Table 8-119 in [CMIS](http://www.qsfp-dd.com/wp-content/uploads/2021/05/CMIS5p0.pdf)
 
 |Address|Page Description|Type|
 |-------|----------------|----|
@@ -1114,7 +1114,7 @@ def set_laser_freq(port, freq):
         print('Error! Tuning failed!')
 ```
 ### Module firmware upgrade using command data block (CDB)
-This section discusses the details of implementing firmware upgrade using CDB message communication. Figure 7-4 in [CMIS](http://www.qsfp-dd.com/wp-content/uploads/2019/05/QSFP-DD-CMIS-rev4p0.pdf) defines the flowchart for upgrading the module firmware. 
+This section discusses the details of implementing firmware upgrade using CDB message communication. Figure 7-4 in [CMIS](http://www.qsfp-dd.com/wp-content/uploads/2021/05/CMIS5p0.pdf) defines the flowchart for upgrading the module firmware. 
 
 The first step is to obtain CDB features supported by the module from CDB command 0041h, such as start local payload size, maximum block size, whether extended payload messaging (page 0xA0 - 0xAF) or only local payload is supported. These features are important because the following upgrade with depend on these parameters. 
 
